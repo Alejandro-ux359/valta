@@ -22,8 +22,8 @@ import { getUnreadCount } from "@/lib/notifications";
 import { useStore } from "@/lib/store/useStore";
 import { TransactionItem } from "@/components/cards/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
+// import { format } from "date-fns";
+// import { es } from "date-fns/locale";
 import { LinearGradient } from "expo-linear-gradient";
 
 const QUICK_ACTIONS = [
@@ -51,7 +51,7 @@ const QUICK_ACTIONS = [
   {
     icon: "credit-card",
     label: "Registrar\nPago",
-    route: "/modals/add-expense",
+    route: "/modals/register-payment",
     color: "#FFF8E1",
     iconColor: "#F57F17",
   },
@@ -103,7 +103,7 @@ export default function DashboardScreen() {
     ]);
   };
 
-  const monthName = format(new Date(), "MMMM yyyy", { locale: es });
+  //const monthName = format(new Date(), "MMMM yyyy", { locale: es });
 
   return (
     <View style={styles.container}>

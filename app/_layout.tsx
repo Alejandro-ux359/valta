@@ -31,6 +31,10 @@ export default function RootLayout() {
           name="modals/add-debt"
           options={{ presentation: "modal", headerShown: false }}
         />
+        <Stack.Screen
+          name="modals/register-payment"
+          options={{ presentation: "modal", headerShown: false }}
+        />
       </Stack>
     </SafeAreaProvider>
   );

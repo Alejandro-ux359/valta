@@ -50,7 +50,7 @@ const QUICK_ACTIONS = [
   },
   {
     icon: "credit-card",
-    label: "Registrar\nPago",
+    label: "Mis\nPagos",
     route: "/modals/register-payment",
     color: "#FFF8E1",
     iconColor: "#F57F17",

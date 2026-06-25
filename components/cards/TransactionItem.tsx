@@ -16,7 +16,7 @@ import { es } from "date-fns/locale";
 
 const SCREEN_WIDTH = Dimensions.get("window").width;
 const SWIPE_THRESHOLD = 80;
-const ACTION_WIDTH = 160; // ancho total de las 2 acciones
+const ACTION_WIDTH = 160;
 
 interface TransactionItemProps {
   transaction: Transaction;
@@ -34,24 +34,21 @@ export function TransactionItem({
   const isIncome = tx.type === "income";
   const translateX = useRef(new Animated.Value(0)).current;
   const isOpen = useRef(false);
+  const categoryColor = tx.category_color ?? "#1565C0";
 
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gesture) =>
         Math.abs(gesture.dx) > 8 && Math.abs(gesture.dy) < 20,
-
       onPanResponderMove: (_, gesture) => {
-        // Solo deslizar hacia la izquierda
         if (gesture.dx < 0) {
           translateX.setValue(Math.max(gesture.dx, -ACTION_WIDTH));
         } else if (isOpen.current) {
           translateX.setValue(Math.min(-ACTION_WIDTH + gesture.dx, 0));
         }
       },
-
       onPanResponderRelease: (_, gesture) => {
         if (gesture.dx < -SWIPE_THRESHOLD) {
-          // Abrir acciones
           Animated.spring(translateX, {
             toValue: -ACTION_WIDTH,
             useNativeDriver: true,
@@ -60,7 +57,6 @@ export function TransactionItem({
           }).start();
           isOpen.current = true;
         } else {
-          // Cerrar
           Animated.spring(translateX, {
             toValue: 0,
             useNativeDriver: true,
@@ -83,6 +79,9 @@ export function TransactionItem({
 
   return (
     <View style={styles.container}>
+      {/* Barra de color — absoluta, ocupa todo el alto del item */}
+      <View style={[styles.colorBar, { backgroundColor: categoryColor }]} />
+
       {/* Botones de acción detrás */}
       <View style={styles.actionsContainer}>
         <TouchableOpacity
@@ -122,15 +121,12 @@ export function TransactionItem({
           activeOpacity={0.8}
         >
           <View
-            style={[
-              styles.iconWrap,
-              { backgroundColor: (tx.category_color ?? "#1565C0") + "22" },
-            ]}
+            style={[styles.iconWrap, { backgroundColor: categoryColor + "22" }]}
           >
             <MaterialIcons
               name={(tx.category_icon as any) ?? "category"}
               size={20}
-              color={tx.category_color ?? Colors.primary}
+              color={categoryColor}
             />
           </View>
 
@@ -164,6 +160,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
   },
+  colorBar: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 4,
+    zIndex: 2,
+  },
   actionsContainer: {
     position: "absolute",
     right: 0,
@@ -190,7 +194,8 @@ const styles = StyleSheet.create({
   rowInner: {
     flexDirection: "row",
     alignItems: "center",
-    paddingHorizontal: Spacing.md,
+    paddingLeft: Spacing.md + 6,
+    paddingRight: Spacing.md,
     paddingVertical: Spacing.sm + 2,
   },
   iconWrap: {

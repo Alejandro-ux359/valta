@@ -1,4 +1,5 @@
-import { create } from 'zustand';
+import { create } from "zustand";
+import { Appearance } from "react-native";
 
 interface Summary {
   balance: number;
@@ -22,17 +23,21 @@ interface AppState {
   setCurrency: (c: string) => void;
 }
 
-export const useStore = create<AppState>((set) => ({
+export const useStore = create<AppState>((set, get) => ({
   balance: 0,
   income: 0,
   expenses: 0,
   savings: 0,
   unreadNotifications: 0,
-  isDarkMode: false,
-  currency: 'USD',
+  isDarkMode: Appearance.getColorScheme() === "dark",
+  currency: "CUP",
 
   setSummary: (s) => set(s),
   setUnreadNotifications: (n) => set({ unreadNotifications: n }),
-  toggleDarkMode: () => set((state) => ({ isDarkMode: !state.isDarkMode })),
+  toggleDarkMode: () => {
+    const next = !get().isDarkMode;
+    set({ isDarkMode: next });
+    Appearance.setColorScheme(next ? "dark" : "light");
+  },
   setCurrency: (currency) => set({ currency }),
 }));

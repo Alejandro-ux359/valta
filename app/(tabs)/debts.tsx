@@ -19,6 +19,9 @@ import {
 } from "@/lib/database/debts";
 import { DebtItem, Debt } from "@/components/cards/DebtItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { useColors } from "@/lib/hooks/useColors";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useStore } from "@/lib/store/useStore";
 
 type DebtTab = "payable" | "receivable";
 
@@ -29,6 +32,9 @@ export default function DebtsScreen() {
   const [totalPayable, setTotalPayable] = useState(0);
   const [totalReceivable, setTotalReceivable] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  const C = useColors();
+  const { isDarkMode } = useStore();
+  const insets = useSafeAreaInsets();
 
   const loadData = useCallback(async () => {
     const [allDebts, summary] = await Promise.all([
@@ -87,22 +93,33 @@ export default function DebtsScreen() {
   const filtered = debts.filter((d) => d.type === activeTab);
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.root, { backgroundColor: C.background }]}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Gestión de Deudas</Text>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: C.white,
+            borderBottomColor: C.border,
+            paddingTop: insets.top + 12,
+          },
+        ]}
+      >
+        <Text style={[styles.headerTitle, { color: C.textPrimary }]}>
+          Gestión de Deudas
+        </Text>
         <TouchableOpacity>
           <MaterialIcons
             name="notifications-none"
             size={24}
-            color={Colors.textPrimary}
+            color={C.textPrimary}
           />
         </TouchableOpacity>
       </View>
 
       {/* Resumen */}
       <View style={styles.summaryRow}>
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, { backgroundColor: C.white }]}>
           <Text style={styles.summaryLabel}>TOTAL POR PAGAR</Text>
           <Text style={[styles.summaryAmount, { color: Colors.danger }]}>
             ${totalPayable.toFixed(2)}
@@ -115,7 +132,7 @@ export default function DebtsScreen() {
           </View>
         </View>
 
-        <View style={styles.summaryCard}>
+        <View style={[styles.summaryCard, { backgroundColor: C.white }]}>
           <Text style={styles.summaryLabel}>TOTAL POR COBRAR</Text>
           <Text style={[styles.summaryAmount, { color: Colors.success }]}>
             ${totalReceivable.toFixed(2)}
@@ -199,23 +216,17 @@ export default function DebtsScreen() {
 }
 
 const styles = StyleSheet.create({
+  root: { flex: 1 },
   container: { flex: 1, backgroundColor: Colors.background },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
-  headerTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  headerTitle: { fontSize: FontSize.xl, fontWeight: "bold" },
   summaryRow: {
     flexDirection: "row",
     gap: Spacing.sm,
@@ -272,11 +283,11 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: Colors.success,
+    backgroundColor: Colors.primaryLight,
     alignItems: "center",
     justifyContent: "center",
     elevation: 6,
-    shadowColor: Colors.success,
+    shadowColor: Colors.primaryLight,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 8,

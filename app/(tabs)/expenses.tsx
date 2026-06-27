@@ -14,6 +14,7 @@ import { router, useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/lib/constants/theme";
+import { useColors } from "@/lib/hooks/useColors";
 import {
   getTransactions,
   deleteTransaction,
@@ -34,6 +35,7 @@ const CATEGORIES_ICONS = [
 ] as const;
 
 export default function ExpensesScreen() {
+  const C = useColors();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [filter, setFilter] = useState<FilterType>("all");
   const [search, setSearch] = useState("");
@@ -91,20 +93,31 @@ export default function ExpensesScreen() {
     .reduce((s, t) => s + t.amount, 0);
 
   return (
-    <View style={styles.container}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Gastos e Ingresos</Text>
+    <View style={[styles.root, { backgroundColor: C.background }]}>
+      {/* ── HEADER FIJO ── */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: C.white,
+            borderBottomColor: C.border,
+            paddingTop: insets.top + 12,
+          },
+        ]}
+      >
+        <Text style={[styles.headerTitle, { color: C.textPrimary }]}>
+          Gastos e Ingresos
+        </Text>
         <TouchableOpacity>
           <MaterialIcons
             name="notifications-none"
             size={24}
-            color={Colors.textPrimary}
+            color={C.textPrimary}
           />
         </TouchableOpacity>
       </View>
 
-      {/* ── Todo en un ScrollView para evitar espacios ── */}
+      {/* ── SCROLL ── */}
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -114,18 +127,23 @@ export default function ExpensesScreen() {
         keyboardShouldPersistTaps="handled"
       >
         {/* Buscador */}
-        <View style={styles.searchRow}>
-          <MaterialIcons name="search" size={20} color={Colors.textMuted} />
+        <View
+          style={[
+            styles.searchRow,
+            { backgroundColor: C.white, borderColor: C.border },
+          ]}
+        >
+          <MaterialIcons name="search" size={20} color={C.textMuted} />
           <TextInput
-            style={styles.searchInput}
+            style={[styles.searchInput, { color: C.textPrimary }]}
             placeholder="Buscar transacciones..."
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={C.textMuted}
             value={search}
             onChangeText={setSearch}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch("")}>
-              <MaterialIcons name="close" size={18} color={Colors.textMuted} />
+              <MaterialIcons name="close" size={18} color={C.textMuted} />
             </TouchableOpacity>
           )}
         </View>
@@ -135,12 +153,17 @@ export default function ExpensesScreen() {
           {(["all", "expense", "income"] as FilterType[]).map((f) => (
             <TouchableOpacity
               key={f}
-              style={[styles.filterBtn, filter === f && styles.filterBtnActive]}
+              style={[
+                styles.filterBtn,
+                { borderColor: C.border, backgroundColor: C.white },
+                filter === f && styles.filterBtnActive,
+              ]}
               onPress={() => setFilter(f)}
             >
               <Text
                 style={[
                   styles.filterText,
+                  { color: C.textSecondary },
                   filter === f && styles.filterTextActive,
                 ]}
               >
@@ -185,6 +208,7 @@ export default function ExpensesScreen() {
               <Text
                 style={[
                   styles.catChipLabel,
+                  { color: C.textSecondary },
                   activeCat === cat.id && {
                     color: cat.color,
                     fontWeight: "600",
@@ -198,29 +222,48 @@ export default function ExpensesScreen() {
         </ScrollView>
 
         {/* Resumen */}
-        <View style={styles.summaryRow}>
+        <View
+          style={[
+            styles.summaryRow,
+            { backgroundColor: C.white, borderColor: C.borderLight },
+          ]}
+        >
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Ingresos</Text>
+            <Text style={[styles.summaryLabel, { color: C.textMuted }]}>
+              Ingresos
+            </Text>
             <Text style={[styles.summaryValue, { color: Colors.success }]}>
               +${totalIncome.toFixed(2)}
             </Text>
           </View>
-          <View style={styles.summaryDivider} />
+          <View
+            style={[styles.summaryDivider, { backgroundColor: C.borderLight }]}
+          />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Gastos</Text>
+            <Text style={[styles.summaryLabel, { color: C.textMuted }]}>
+              Gastos
+            </Text>
             <Text style={[styles.summaryValue, { color: Colors.danger }]}>
               -${totalExpense.toFixed(2)}
             </Text>
           </View>
-          <View style={styles.summaryDivider} />
+          <View
+            style={[styles.summaryDivider, { backgroundColor: C.borderLight }]}
+          />
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Registros</Text>
-            <Text style={styles.summaryValue}>{filtered.length}</Text>
+            <Text style={[styles.summaryLabel, { color: C.textMuted }]}>
+              Registros
+            </Text>
+            <Text style={[styles.summaryValue, { color: C.textPrimary }]}>
+              {filtered.length}
+            </Text>
           </View>
         </View>
 
         {/* Lista */}
-        <Text style={styles.sectionLabel}>Transacciones Recientes</Text>
+        <Text style={[styles.sectionLabel, { color: C.textSecondary }]}>
+          Transacciones Recientes
+        </Text>
 
         {filtered.length === 0 ? (
           <EmptyState
@@ -229,7 +272,7 @@ export default function ExpensesScreen() {
             subtitle="No hay transacciones que coincidan"
           />
         ) : (
-          <View style={styles.txCard}>
+          <View style={[styles.txCard, { backgroundColor: C.white }]}>
             {filtered.map((tx) => (
               <TransactionItem
                 key={tx.id}
@@ -264,10 +307,15 @@ export default function ExpensesScreen() {
           <View
             style={[
               styles.fabSheet,
-              { paddingBottom: insets.bottom + Spacing.md },
+              {
+                backgroundColor: C.white,
+                paddingBottom: insets.bottom + Spacing.md,
+              },
             ]}
           >
-            <Text style={styles.fabSheetTitle}>¿Qué deseas agregar?</Text>
+            <Text style={[styles.fabSheetTitle, { color: C.textPrimary }]}>
+              ¿Qué deseas agregar?
+            </Text>
 
             <TouchableOpacity
               style={styles.fabOption}
@@ -286,17 +334,23 @@ export default function ExpensesScreen() {
                 />
               </View>
               <View style={styles.fabOptionText}>
-                <Text style={styles.fabOptionTitle}>Agregar Gasto</Text>
-                <Text style={styles.fabOptionSub}>Registra un nuevo gasto</Text>
+                <Text style={[styles.fabOptionTitle, { color: C.textPrimary }]}>
+                  Agregar Gasto
+                </Text>
+                <Text style={[styles.fabOptionSub, { color: C.textSecondary }]}>
+                  Registra un nuevo gasto
+                </Text>
               </View>
               <MaterialIcons
                 name="chevron-right"
                 size={20}
-                color={Colors.textMuted}
+                color={C.textMuted}
               />
             </TouchableOpacity>
 
-            <View style={styles.fabDivider} />
+            <View
+              style={[styles.fabDivider, { backgroundColor: C.borderLight }]}
+            />
 
             <TouchableOpacity
               style={styles.fabOption}
@@ -315,23 +369,27 @@ export default function ExpensesScreen() {
                 />
               </View>
               <View style={styles.fabOptionText}>
-                <Text style={styles.fabOptionTitle}>Agregar Ingreso</Text>
-                <Text style={styles.fabOptionSub}>
+                <Text style={[styles.fabOptionTitle, { color: C.textPrimary }]}>
+                  Agregar Ingreso
+                </Text>
+                <Text style={[styles.fabOptionSub, { color: C.textSecondary }]}>
                   Registra un nuevo ingreso
                 </Text>
               </View>
               <MaterialIcons
                 name="chevron-right"
                 size={20}
-                color={Colors.textMuted}
+                color={C.textMuted}
               />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.fabCancel}
+              style={[styles.fabCancel, { backgroundColor: C.background }]}
               onPress={() => setShowFabMenu(false)}
             >
-              <Text style={styles.fabCancelText}>Cancelar</Text>
+              <Text style={[styles.fabCancelText, { color: C.textSecondary }]}>
+                Cancelar
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -341,24 +399,18 @@ export default function ExpensesScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1 },
 
+  // Header fijo
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
-  headerTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  headerTitle: { fontSize: FontSize.xl, fontWeight: "bold" },
 
   scroll: { flex: 1 },
 
@@ -366,16 +418,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
-    backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  searchInput: { flex: 1, fontSize: FontSize.md, color: Colors.textPrimary },
+  searchInput: { flex: 1, fontSize: FontSize.md },
 
   filterRow: {
     flexDirection: "row",
@@ -389,18 +439,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderRadius: BorderRadius.lg,
     borderWidth: 1.5,
-    borderColor: Colors.border,
-    backgroundColor: Colors.white,
   },
   filterBtnActive: {
     backgroundColor: Colors.primary,
     borderColor: Colors.primary,
   },
-  filterText: {
-    fontSize: FontSize.sm,
-    fontWeight: "500",
-    color: Colors.textSecondary,
-  },
+  filterText: { fontSize: FontSize.sm, fontWeight: "500" },
   filterTextActive: { color: Colors.white },
 
   catsContent: {
@@ -416,43 +460,31 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  catChipLabel: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  catChipLabel: { fontSize: FontSize.xs },
 
   summaryRow: {
     flexDirection: "row",
-    backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm + 2,
     paddingHorizontal: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   summaryItem: { flex: 1, alignItems: "center", gap: 2 },
-  summaryLabel: { fontSize: 11, color: Colors.textMuted },
-  summaryValue: {
-    fontSize: FontSize.md,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: Colors.borderLight,
-    marginVertical: 4,
-  },
+  summaryLabel: { fontSize: 11 },
+  summaryValue: { fontSize: FontSize.md, fontWeight: "bold" },
+  summaryDivider: { width: 1, marginVertical: 4 },
 
   sectionLabel: {
     fontSize: FontSize.sm,
     fontWeight: "600",
-    color: Colors.textSecondary,
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   txCard: {
-    backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
     marginHorizontal: Spacing.md,
     overflow: "hidden",
@@ -476,14 +508,12 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
   },
 
-  // FAB Modal
   fabOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
   },
   fabSheet: {
-    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: Spacing.lg,
@@ -492,7 +522,6 @@ const styles = StyleSheet.create({
   fabSheetTitle: {
     fontSize: FontSize.lg,
     fontWeight: "bold",
-    color: Colors.textPrimary,
     marginBottom: Spacing.lg,
   },
   fabOption: {
@@ -509,32 +538,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   fabOptionText: { flex: 1 },
-  fabOptionTitle: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-  },
-  fabOptionSub: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 2,
-  },
-  fabDivider: {
-    height: 1,
-    backgroundColor: Colors.borderLight,
-    marginVertical: Spacing.xs,
-  },
+  fabOptionTitle: { fontSize: FontSize.md, fontWeight: "600" },
+  fabOptionSub: { fontSize: FontSize.xs, marginTop: 2 },
+  fabDivider: { height: 1, marginVertical: Spacing.xs },
   fabCancel: {
     alignItems: "center",
     paddingVertical: Spacing.md,
     marginTop: Spacing.sm,
-    backgroundColor: Colors.background,
     borderRadius: BorderRadius.lg,
     marginBottom: Spacing.sm,
   },
-  fabCancelText: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
+  fabCancelText: { fontSize: FontSize.md, fontWeight: "600" },
 });

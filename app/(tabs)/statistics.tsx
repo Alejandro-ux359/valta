@@ -9,7 +9,10 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/lib/constants/theme";
+import { useColors } from "@/lib/hooks/useColors";
+import { useStore } from "@/lib/store/useStore";
 import {
   getSummary,
   getExpensesByCategory,
@@ -28,22 +31,17 @@ import {
   eachDayOfInterval,
   startOfMonth,
   endOfMonth,
-  eachDayOfInterval as eachDay,
   startOfYear,
   endOfYear,
   eachMonthOfInterval,
   isSameDay,
   isToday,
   parseISO,
+  subMonths,
 } from "date-fns";
 import { es } from "date-fns/locale";
 
 type Period = "week" | "month" | "year";
-
-interface DayStats {
-  income: number;
-  expenses: number;
-}
 
 const MONTH_LABELS: Record<string, string> = {
   "01": "Ene",
@@ -61,19 +59,22 @@ const MONTH_LABELS: Record<string, string> = {
 };
 
 export default function StatisticsScreen() {
+  const C = useColors();
+  const { isDarkMode } = useStore();
+  const insets = useSafeAreaInsets();
+
   const [period, setPeriod] = useState<Period>("month");
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
   const [calendarRef, setCalendarRef] = useState<Date>(new Date());
-
-  // Datos globales
   const [income, setIncome] = useState(0);
   const [expenses, setExpenses] = useState(0);
   const [categories, setCategories] = useState<CategoryTotal[]>([]);
   const [monthly, setMonthly] = useState<MonthlyData[]>([]);
-
-  // Datos del día/período seleccionado
-  const [selectedStats, setSelectedStats] = useState<DayStats | null>(null);
+  const [selectedStats, setSelectedStats] = useState<{
+    income: number;
+    expenses: number;
+  } | null>(null);
   const [selectedLabel, setSelectedLabel] = useState("");
 
   const loadData = useCallback(async () => {
@@ -94,12 +95,10 @@ export default function StatisticsScreen() {
     }, [loadData]),
   );
 
-  // ── Cargar stats para una fecha/período seleccionado ──
   const loadStatsForDate = async (date: Date, p: Period) => {
     const db = getDatabase();
     let whereClause = "";
     let label = "";
-
     if (p === "week") {
       const start = format(
         startOfWeek(date, { weekStartsOn: 1 }),
@@ -115,14 +114,12 @@ export default function StatisticsScreen() {
       whereClause = `strftime('%Y', date) = '${format(date, "yyyy")}'`;
       label = format(date, "yyyy");
     }
-
     const result = (await db.getFirstAsync(
       `SELECT
-        COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END), 0) as income,
-        COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END), 0) as expenses
+        COALESCE(SUM(CASE WHEN type='income' THEN amount ELSE 0 END),0) as income,
+        COALESCE(SUM(CASE WHEN type='expense' THEN amount ELSE 0 END),0) as expenses
        FROM transactions WHERE ${whereClause}`,
     )) as { income: number; expenses: number } | null;
-
     setSelectedStats({
       income: result?.income ?? 0,
       expenses: result?.expenses ?? 0,
@@ -130,19 +127,18 @@ export default function StatisticsScreen() {
     setSelectedLabel(label);
   };
 
-  // ── Días/meses para el calendario ──
   const getCalendarDays = () => {
     const ref = calendarRef;
-    if (period === "week") {
+    if (period === "week")
       return eachDayOfInterval({
         start: startOfWeek(ref, { weekStartsOn: 1 }),
         end: endOfWeek(ref, { weekStartsOn: 1 }),
       });
-    }
-    if (period === "month") {
-      return eachDay({ start: startOfMonth(ref), end: endOfMonth(ref) });
-    }
-    // year → meses
+    if (period === "month")
+      return eachDayOfInterval({
+        start: startOfMonth(ref),
+        end: endOfMonth(ref),
+      });
     return eachMonthOfInterval({
       start: startOfYear(ref),
       end: endOfYear(ref),
@@ -161,15 +157,12 @@ export default function StatisticsScreen() {
     setSelectedLabel("");
   };
 
-  // ── Métricas ──
   const displayIncome = selectedStats?.income ?? income;
   const displayExpenses = selectedStats?.expenses ?? expenses;
   const savingsRate =
     displayIncome > 0
       ? Math.round(((displayIncome - displayExpenses) / displayIncome) * 100)
       : 0;
-
-  // Salud financiera: basada en tasa de ahorro + si gastos < ingresos
   const healthScore = Math.min(
     100,
     Math.max(
@@ -179,13 +172,12 @@ export default function StatisticsScreen() {
         : displayExpenses === 0
           ? 100
           : Math.round(
-              (savingsRate > 0 ? Math.min(savingsRate * 1.5, 60) : 0) + // 60pts por ahorro
-                (displayExpenses < displayIncome ? 30 : 0) + // 30pts por balance positivo
-                (savingsRate >= 20 ? 10 : 0), // 10pts bonus por 20%+ ahorro
+              (savingsRate > 0 ? Math.min(savingsRate * 1.5, 60) : 0) +
+                (displayExpenses < displayIncome ? 30 : 0) +
+                (savingsRate >= 20 ? 10 : 0),
             ),
     ),
   );
-
   const healthLabel =
     healthScore >= 80
       ? "Excelente"
@@ -202,247 +194,309 @@ export default function StatisticsScreen() {
         : healthScore >= 40
           ? Colors.warning
           : Colors.danger;
-
   const maxCategoryTotal = Math.max(...categories.map((c) => c.total), 1);
   const barData = monthly.map((m) => ({
     label: MONTH_LABELS[m.month] ?? m.month,
     income: m.income,
     expenses: m.expenses,
   }));
-
   const calendarDays = getCalendarDays();
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Estadísticas</Text>
+    <View style={[styles.root, { backgroundColor: C.background }]}>
+      {/* ── HEADER FIJO ── */}
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: C.white,
+            borderBottomColor: C.border,
+            paddingTop: insets.top + 12,
+          },
+        ]}
+      >
+        <Text style={[styles.headerTitle, { color: C.textPrimary }]}>
+          Estadísticas
+        </Text>
         <TouchableOpacity
-          style={styles.calendarBtn}
+          style={[styles.calendarBtn, { backgroundColor: C.surfaceSecondary }]}
           onPress={() => setShowCalendar(true)}
         >
-          <MaterialIcons
-            name="calendar-today"
-            size={20}
-            color={Colors.primary}
-          />
+          <MaterialIcons name="calendar-today" size={20} color={C.primary} />
         </TouchableOpacity>
       </View>
 
-      {/* ── Selector período ── */}
-      <View style={styles.periodRow}>
-        {(["week", "month", "year"] as Period[]).map((p) => (
-          <TouchableOpacity
-            key={p}
-            style={[styles.periodBtn, period === p && styles.periodBtnActive]}
-            onPress={() => handlePeriodChange(p)}
-          >
-            <Text
-              style={[
-                styles.periodText,
-                period === p && styles.periodTextActive,
-              ]}
+      {/* ── SELECTOR PERÍODO FIJO ── */}
+      <View style={[styles.periodWrap, { backgroundColor: C.background }]}>
+        <View
+          style={[
+            styles.periodRow,
+            { backgroundColor: C.white, borderColor: C.border },
+          ]}
+        >
+          {(["week", "month", "year"] as Period[]).map((p) => (
+            <TouchableOpacity
+              key={p}
+              style={[styles.periodBtn, period === p && styles.periodBtnActive]}
+              onPress={() => handlePeriodChange(p)}
             >
-              {p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* ── Label del período seleccionado ── */}
-      {selectedLabel ? (
-        <View style={styles.selectedPeriodRow}>
-          <MaterialIcons name="event" size={14} color={Colors.primary} />
-          <Text style={styles.selectedPeriodText}>{selectedLabel}</Text>
-          <TouchableOpacity
-            onPress={() => {
-              setSelectedStats(null);
-              setSelectedLabel("");
-            }}
-          >
-            <MaterialIcons name="close" size={16} color={Colors.textMuted} />
-          </TouchableOpacity>
+              <Text
+                style={[
+                  styles.periodText,
+                  { color: C.textSecondary },
+                  period === p && styles.periodTextActive,
+                ]}
+              >
+                {p === "week" ? "Semana" : p === "month" ? "Mes" : "Año"}
+              </Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      ) : (
-        <TouchableOpacity
-          style={styles.calendarHint}
-          onPress={() => setShowCalendar(true)}
-        >
-          <MaterialIcons name="touch-app" size={14} color={Colors.textMuted} />
-          <Text style={styles.calendarHintText}>
-            Toca el calendario para filtrar por{" "}
-            {period === "week" ? "semana" : period === "month" ? "mes" : "año"}
-          </Text>
-        </TouchableOpacity>
-      )}
 
-      {/* ── KPIs ── */}
-      <View style={styles.kpiRow}>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>INGRESOS TOTALES</Text>
-          <Text style={[styles.kpiValue, { color: Colors.success }]}>
-            ${displayIncome.toFixed(2)}
-          </Text>
-        </View>
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>GASTOS TOTALES</Text>
-          <Text style={[styles.kpiValue, { color: Colors.danger }]}>
-            ${displayExpenses.toFixed(2)}
-          </Text>
-        </View>
-      </View>
-
-      <View style={styles.kpiRow}>
-        {/* Tasa de ahorro */}
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>TASA DE AHORRO</Text>
-          <Text
+        {/* Label período seleccionado */}
+        {selectedLabel ? (
+          <View
             style={[
-              styles.kpiValue,
-              { color: savingsRate >= 0 ? Colors.primary : Colors.danger },
+              styles.selectedPeriodRow,
+              { backgroundColor: isDarkMode ? "#1a2744" : "#E3F2FD" },
             ]}
           >
-            {savingsRate}%
-          </Text>
-          <View style={styles.progressBg}>
-            <View
-              style={[
-                styles.progressFill,
-                {
-                  width: `${Math.min(Math.abs(savingsRate), 100)}%`,
-                  backgroundColor:
-                    savingsRate >= 0 ? Colors.primary : Colors.danger,
-                },
-              ]}
-            />
+            <MaterialIcons name="event" size={14} color={C.primary} />
+            <Text style={[styles.selectedPeriodText, { color: C.primary }]}>
+              {selectedLabel}
+            </Text>
+            <TouchableOpacity
+              onPress={() => {
+                setSelectedStats(null);
+                setSelectedLabel("");
+              }}
+            >
+              <MaterialIcons name="close" size={16} color={C.textMuted} />
+            </TouchableOpacity>
           </View>
-          <Text style={styles.kpiHint}>
-            {savingsRate >= 20
-              ? "✓ Meta de ahorro alcanzada"
-              : savingsRate >= 0
-                ? "Intenta ahorrar más del 20%"
-                : "Gastos superan tus ingresos"}
-          </Text>
-        </View>
+        ) : (
+          <TouchableOpacity
+            style={styles.calendarHint}
+            onPress={() => setShowCalendar(true)}
+          >
+            <MaterialIcons name="touch-app" size={14} color={C.textMuted} />
+            <Text style={[styles.calendarHintText, { color: C.textMuted }]}>
+              Toca el calendario para filtrar por{" "}
+              {period === "week"
+                ? "semana"
+                : period === "month"
+                  ? "mes"
+                  : "año"}
+            </Text>
+          </TouchableOpacity>
+        )}
+      </View>
 
-        {/* Salud financiera */}
-        <View style={styles.kpiCard}>
-          <Text style={styles.kpiLabel}>SALUD FINANCIERA</Text>
-          <Text style={[styles.kpiValue, { color: Colors.textPrimary }]}>
-            {healthScore}
-            <Text style={styles.kpiSub}> /100</Text>
-          </Text>
-          <View style={styles.healthRow}>
-            <View
-              style={[styles.healthDot, { backgroundColor: healthColor }]}
-            />
-            <Text style={[styles.healthLabel, { color: healthColor }]}>
-              {healthLabel}
+      {/* ── SCROLL ── */}
+      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* KPIs */}
+        <View style={styles.kpiRow}>
+          <View style={[styles.kpiCard, { backgroundColor: C.white }]}>
+            <Text style={[styles.kpiLabel, { color: C.textMuted }]}>
+              INGRESOS TOTALES
+            </Text>
+            <Text style={[styles.kpiValue, { color: Colors.success }]}>
+              ${displayIncome.toFixed(2)}
             </Text>
           </View>
-          <Text style={styles.kpiHint}>
-            {healthScore >= 80
-              ? "Finanzas en orden"
-              : healthScore >= 60
-                ? "Vas por buen camino"
-                : healthScore >= 40
-                  ? "Revisa tus gastos"
-                  : "Necesitas mejorar urgente"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Explicación salud financiera */}
-      <View style={styles.infoCard}>
-        <MaterialIcons name="info-outline" size={16} color={Colors.primary} />
-        <Text style={styles.infoText}>
-          <Text style={{ fontWeight: "600" }}>Salud financiera</Text> se calcula
-          en base a: tasa de ahorro (60pts) + balance positivo (30pts) + ahorro
-          mayor al 20% (10pts).
-          {"\n"}
-          <Text style={{ fontWeight: "600" }}>Tasa de ahorro</Text> = (ingresos
-          - gastos) / ingresos × 100
-        </Text>
-      </View>
-
-      {/* ── Gráfica ── */}
-      <Card style={styles.chartCard}>
-        <View style={styles.chartHeader}>
-          <Text style={styles.chartTitle}>Ingresos vs Gastos</Text>
-          <View style={styles.legendRow}>
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendDot, { backgroundColor: Colors.primary }]}
-              />
-              <Text style={styles.legendText}>Ingresos</Text>
-            </View>
-            <View style={styles.legendItem}>
-              <View
-                style={[styles.legendDot, { backgroundColor: Colors.border }]}
-              />
-              <Text style={styles.legendText}>Gastos</Text>
-            </View>
+          <View style={[styles.kpiCard, { backgroundColor: C.white }]}>
+            <Text style={[styles.kpiLabel, { color: C.textMuted }]}>
+              GASTOS TOTALES
+            </Text>
+            <Text style={[styles.kpiValue, { color: Colors.danger }]}>
+              ${displayExpenses.toFixed(2)}
+            </Text>
           </View>
         </View>
 
-        {barData.length === 0 ? (
-          <EmptyState
-            icon="bar-chart"
-            title="Sin datos"
-            subtitle="Agrega transacciones para ver la gráfica"
-          />
-        ) : (
-          <MonthlyBarChart data={barData} />
-        )}
-      </Card>
+        <View style={styles.kpiRow}>
+          <View style={[styles.kpiCard, { backgroundColor: C.white }]}>
+            <Text style={[styles.kpiLabel, { color: C.textMuted }]}>
+              TASA DE AHORRO
+            </Text>
+            <Text
+              style={[
+                styles.kpiValue,
+                { color: savingsRate >= 0 ? C.primary : Colors.danger },
+              ]}
+            >
+              {savingsRate}%
+            </Text>
+            <View
+              style={[styles.progressBg, { backgroundColor: C.borderLight }]}
+            >
+              <View
+                style={[
+                  styles.progressFill,
+                  {
+                    width: `${Math.min(Math.abs(savingsRate), 100)}%`,
+                    backgroundColor:
+                      savingsRate >= 0 ? C.primary : Colors.danger,
+                  },
+                ]}
+              />
+            </View>
+            <Text style={[styles.kpiHint, { color: C.textMuted }]}>
+              {savingsRate >= 20
+                ? "✓ Meta alcanzada"
+                : savingsRate >= 0
+                  ? "Intenta ahorrar más del 20%"
+                  : "Gastos superan tus ingresos"}
+            </Text>
+          </View>
+          <View style={[styles.kpiCard, { backgroundColor: C.white }]}>
+            <Text style={[styles.kpiLabel, { color: C.textMuted }]}>
+              SALUD FINANCIERA
+            </Text>
+            <Text style={[styles.kpiValue, { color: C.textPrimary }]}>
+              {healthScore}
+              <Text style={[styles.kpiSub, { color: C.textSecondary }]}>
+                {" "}
+                /100
+              </Text>
+            </Text>
+            <View style={styles.healthRow}>
+              <View
+                style={[styles.healthDot, { backgroundColor: healthColor }]}
+              />
+              <Text style={[styles.healthLabel, { color: healthColor }]}>
+                {healthLabel}
+              </Text>
+            </View>
+            <Text style={[styles.kpiHint, { color: C.textMuted }]}>
+              {healthScore >= 80
+                ? "Finanzas en orden"
+                : healthScore >= 60
+                  ? "Vas por buen camino"
+                  : healthScore >= 40
+                    ? "Revisa tus gastos"
+                    : "Necesitas mejorar urgente"}
+            </Text>
+          </View>
+        </View>
 
-      {/* ── Gastos por categoría ── */}
-      <Card style={styles.chartCard}>
-        <Text style={styles.chartTitle}>Gastos por Categoría</Text>
-        {categories.length === 0 ? (
-          <EmptyState
-            icon="pie-chart"
-            title="Sin datos"
-            subtitle="Sin gastos este período"
-          />
-        ) : (
-          <View style={styles.catList}>
-            {categories.map((cat, i) => (
-              <View key={i} style={styles.catRow}>
-                <Text style={styles.catName}>{cat.category_name}</Text>
-                <View style={styles.catBarWrap}>
+        {/* Info card */}
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: isDarkMode ? "#1a2744" : "#E3F2FD" },
+          ]}
+        >
+          <MaterialIcons name="info-outline" size={16} color={C.primary} />
+          <Text
+            style={[
+              styles.infoText,
+              { color: isDarkMode ? "#90CAF9" : "#1565C0" },
+            ]}
+          >
+            <Text style={{ fontWeight: "600" }}>Salud financiera</Text> se
+            calcula en base a: tasa de ahorro (60pts) + balance positivo (30pts)
+            + ahorro mayor al 20% (10pts).{"\n"}
+            <Text style={{ fontWeight: "600" }}>Tasa de ahorro</Text> =
+            (ingresos - gastos) / ingresos × 100
+          </Text>
+        </View>
+
+        {/* Gráfica */}
+        <Card style={[styles.chartCard, { backgroundColor: C.white }]}>
+          <View style={styles.chartHeader}>
+            <Text style={[styles.chartTitle, { color: C.textPrimary }]}>
+              Ingresos vs Gastos
+            </Text>
+            <View style={styles.legendRow}>
+              <View style={styles.legendItem}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: C.primary }]}
+                />
+                <Text style={[styles.legendText, { color: C.textSecondary }]}>
+                  Ingresos
+                </Text>
+              </View>
+              <View style={styles.legendItem}>
+                <View
+                  style={[styles.legendDot, { backgroundColor: C.border }]}
+                />
+                <Text style={[styles.legendText, { color: C.textSecondary }]}>
+                  Gastos
+                </Text>
+              </View>
+            </View>
+          </View>
+          {barData.length === 0 ? (
+            <EmptyState
+              icon="bar-chart"
+              title="Sin datos"
+              subtitle="Agrega transacciones para ver la gráfica"
+            />
+          ) : (
+            <MonthlyBarChart data={barData} />
+          )}
+        </Card>
+
+        {/* Categorías */}
+        <Card style={[styles.chartCard, { backgroundColor: C.white }]}>
+          <Text style={[styles.chartTitle, { color: C.textPrimary }]}>
+            Gastos por Categoría
+          </Text>
+          {categories.length === 0 ? (
+            <EmptyState
+              icon="pie-chart"
+              title="Sin datos"
+              subtitle="Sin gastos este período"
+            />
+          ) : (
+            <View style={styles.catList}>
+              {categories.map((cat, i) => (
+                <View key={i} style={styles.catRow}>
+                  <Text style={[styles.catName, { color: C.textPrimary }]}>
+                    {cat.category_name}
+                  </Text>
                   <View
                     style={[
-                      styles.catBar,
-                      {
-                        width: `${(cat.total / maxCategoryTotal) * 100}%`,
-                        backgroundColor: cat.color || Colors.primary,
-                      },
+                      styles.catBarWrap,
+                      { backgroundColor: C.borderLight },
                     ]}
-                  />
+                  >
+                    <View
+                      style={[
+                        styles.catBar,
+                        {
+                          width: `${(cat.total / maxCategoryTotal) * 100}%`,
+                          backgroundColor: cat.color || C.primary,
+                        },
+                      ]}
+                    />
+                  </View>
+                  <Text style={[styles.catTotal, { color: C.textPrimary }]}>
+                    ${cat.total.toFixed(2)}
+                  </Text>
                 </View>
-                <Text style={styles.catTotal}>${cat.total.toFixed(2)}</Text>
-              </View>
-            ))}
+              ))}
+            </View>
+          )}
+        </Card>
+
+        {/* Sugerencia */}
+        {displayExpenses > displayIncome * 0.5 && displayIncome > 0 && (
+          <View style={styles.tipCard}>
+            <MaterialIcons name="lightbulb" size={20} color={Colors.white} />
+            <View style={styles.tipContent}>
+              <Text style={styles.tipTitle}>Sugerencia de ahorro</Text>
+              <Text style={styles.tipText}>
+                Tus gastos superan el 50% de tus ingresos. Considera revisar la
+                categoría más alta.
+              </Text>
+            </View>
           </View>
         )}
-      </Card>
 
-      {/* ── Sugerencia ── */}
-      {displayExpenses > displayIncome * 0.5 && displayIncome > 0 && (
-        <View style={styles.tipCard}>
-          <MaterialIcons name="lightbulb" size={20} color={Colors.white} />
-          <View style={styles.tipContent}>
-            <Text style={styles.tipTitle}>Sugerencia de ahorro</Text>
-            <Text style={styles.tipText}>
-              Tus gastos superan el 50% de tus ingresos. Considera revisar la
-              categoría más alta.
-            </Text>
-          </View>
-        </View>
-      )}
-
-      <View style={{ height: Spacing.xl }} />
+        <View style={{ height: Spacing.xl }} />
+      </ScrollView>
 
       {/* ── MODAL CALENDARIO ── */}
       <Modal
@@ -456,8 +510,7 @@ export default function StatisticsScreen() {
           activeOpacity={1}
           onPress={() => setShowCalendar(false)}
         >
-          <View style={styles.calendarSheet}>
-            {/* Cabecera del calendario */}
+          <View style={[styles.calendarSheet, { backgroundColor: C.white }]}>
             <View style={styles.calHeader}>
               <TouchableOpacity
                 onPress={() => {
@@ -471,16 +524,14 @@ export default function StatisticsScreen() {
                 <MaterialIcons
                   name="chevron-left"
                   size={28}
-                  color={Colors.textPrimary}
+                  color={C.textPrimary}
                 />
               </TouchableOpacity>
-
-              <Text style={styles.calTitle}>
+              <Text style={[styles.calTitle, { color: C.textPrimary }]}>
                 {period === "year"
                   ? format(calendarRef, "yyyy")
                   : format(calendarRef, "MMMM yyyy", { locale: es })}
               </Text>
-
               <TouchableOpacity
                 onPress={() => {
                   const ref = new Date(calendarRef);
@@ -493,12 +544,12 @@ export default function StatisticsScreen() {
                 <MaterialIcons
                   name="chevron-right"
                   size={28}
-                  color={Colors.textPrimary}
+                  color={C.textPrimary}
                 />
               </TouchableOpacity>
             </View>
 
-            <Text style={styles.calSubtitle}>
+            <Text style={[styles.calSubtitle, { color: C.textMuted }]}>
               {period === "week"
                 ? "Selecciona un día de la semana"
                 : period === "month"
@@ -506,20 +557,20 @@ export default function StatisticsScreen() {
                   : "Selecciona un mes del año"}
             </Text>
 
-            {/* Días de la semana (header) - solo para week y month */}
             {period !== "year" && (
               <View style={styles.calWeekRow}>
                 {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
-                  <Text key={i} style={styles.calWeekDay}>
+                  <Text
+                    key={i}
+                    style={[styles.calWeekDay, { color: C.textMuted }]}
+                  >
                     {d}
                   </Text>
                 ))}
               </View>
             )}
 
-            {/* Grid */}
             {period === "year" ? (
-              // Meses del año
               <View style={styles.calMonthGrid}>
                 {calendarDays.map((date, i) => {
                   const isSelected =
@@ -529,6 +580,7 @@ export default function StatisticsScreen() {
                       key={i}
                       style={[
                         styles.calMonthItem,
+                        { borderColor: C.border },
                         isSelected && styles.calDaySelected,
                       ]}
                       onPress={() => handleSelectDay(date)}
@@ -536,6 +588,7 @@ export default function StatisticsScreen() {
                       <Text
                         style={[
                           styles.calMonthText,
+                          { color: C.textPrimary },
                           isSelected && styles.calDaySelectedText,
                         ]}
                       >
@@ -546,18 +599,15 @@ export default function StatisticsScreen() {
                 })}
               </View>
             ) : (
-              // Días de semana o mes
               <View style={styles.calDayGrid}>
-                {/* Offset para el primer día del mes */}
                 {period === "month" &&
                   (() => {
                     const firstDay =
                       (startOfMonth(calendarRef).getDay() + 6) % 7;
                     return Array.from({ length: firstDay }).map((_, i) => (
-                      <View key={`empty-${i}`} style={styles.calDay} />
+                      <View key={`e-${i}`} style={styles.calDay} />
                     ));
                   })()}
-
                 {calendarDays.map((date, i) => {
                   const isSelected = isSameDay(date, selectedDate);
                   const isTodayDate = isToday(date);
@@ -567,7 +617,10 @@ export default function StatisticsScreen() {
                       style={[
                         styles.calDay,
                         isSelected && styles.calDaySelected,
-                        isTodayDate && !isSelected && styles.calDayToday,
+                        isTodayDate &&
+                          !isSelected && {
+                            backgroundColor: C.surfaceSecondary,
+                          },
                       ]}
                       onPress={() => handleSelectDay(date)}
                     >
@@ -576,10 +629,9 @@ export default function StatisticsScreen() {
                           <Text
                             style={[
                               styles.calDayLabel,
-                              isSelected && styles.calDaySelectedText,
-                              isTodayDate &&
-                                !isSelected &&
-                                styles.calDayTodayText,
+                              {
+                                color: isSelected ? Colors.white : C.textMuted,
+                              },
                             ]}
                           >
                             {format(date, "EEE", { locale: es })}
@@ -587,10 +639,11 @@ export default function StatisticsScreen() {
                           <Text
                             style={[
                               styles.calDayNum,
-                              isSelected && styles.calDaySelectedText,
-                              isTodayDate &&
-                                !isSelected &&
-                                styles.calDayTodayText,
+                              {
+                                color: isSelected
+                                  ? Colors.white
+                                  : C.textPrimary,
+                              },
                             ]}
                           >
                             {format(date, "d")}
@@ -600,10 +653,13 @@ export default function StatisticsScreen() {
                         <Text
                           style={[
                             styles.calDayText,
-                            isSelected && styles.calDaySelectedText,
-                            isTodayDate &&
-                              !isSelected &&
-                              styles.calDayTodayText,
+                            {
+                              color: isSelected
+                                ? Colors.white
+                                : isTodayDate
+                                  ? C.primary
+                                  : C.textPrimary,
+                            },
                           ]}
                         >
                           {format(date, "d")}
@@ -616,55 +672,53 @@ export default function StatisticsScreen() {
             )}
 
             <TouchableOpacity
-              style={styles.calClose}
+              style={[styles.calClose, { backgroundColor: C.background }]}
               onPress={() => setShowCalendar(false)}
             >
-              <Text style={styles.calCloseText}>Cerrar</Text>
+              <Text style={[styles.calCloseText, { color: C.textSecondary }]}>
+                Cerrar
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
       </Modal>
-    </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1 },
+  scroll: { flex: 1 },
 
+  // Header fijo
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: Spacing.md,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
-  headerTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  headerTitle: { fontSize: FontSize.xl, fontWeight: "bold" },
   calendarBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.surfaceSecondary,
     alignItems: "center",
     justifyContent: "center",
   },
 
+  // Período fijo
+  periodWrap: {
+    paddingHorizontal: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: 4,
+  },
   periodRow: {
     flexDirection: "row",
-    backgroundColor: Colors.white,
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.md,
     borderRadius: BorderRadius.lg,
     padding: 4,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   periodBtn: {
     flex: 1,
@@ -673,40 +727,29 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
   },
   periodBtnActive: { backgroundColor: Colors.primary },
-  periodText: {
-    fontSize: FontSize.sm,
-    fontWeight: "500",
-    color: Colors.textSecondary,
-  },
+  periodText: { fontSize: FontSize.sm, fontWeight: "500" },
   periodTextActive: { color: Colors.white },
 
   selectedPeriodRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
-    backgroundColor: "#E3F2FD",
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
+    marginTop: Spacing.sm,
   },
-  selectedPeriodText: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: "500",
-  },
+  selectedPeriodText: { flex: 1, fontSize: FontSize.sm, fontWeight: "500" },
   calendarHint: {
     flexDirection: "row",
     alignItems: "center",
     gap: 6,
-    marginHorizontal: Spacing.md,
-    marginTop: Spacing.sm,
     paddingVertical: Spacing.sm,
+    marginTop: 2,
   },
-  calendarHintText: { fontSize: FontSize.xs, color: Colors.textMuted },
+  calendarHintText: { fontSize: FontSize.xs },
 
+  // KPIs
   kpiRow: {
     flexDirection: "row",
     gap: Spacing.sm,
@@ -715,27 +758,15 @@ const styles = StyleSheet.create({
   },
   kpiCard: {
     flex: 1,
-    backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     gap: 4,
   },
-  kpiLabel: {
-    fontSize: 10,
-    fontWeight: "600",
-    color: Colors.textMuted,
-    letterSpacing: 0.5,
-  },
+  kpiLabel: { fontSize: 10, fontWeight: "600", letterSpacing: 0.5 },
   kpiValue: { fontSize: FontSize.xl, fontWeight: "bold" },
-  kpiSub: { fontSize: FontSize.sm, color: Colors.textSecondary },
-  kpiHint: { fontSize: 10, color: Colors.textMuted, marginTop: 2 },
-  progressBg: {
-    height: 4,
-    backgroundColor: Colors.borderLight,
-    borderRadius: 2,
-    marginTop: 4,
-    overflow: "hidden",
-  },
+  kpiSub: { fontSize: FontSize.sm },
+  kpiHint: { fontSize: 10, marginTop: 2 },
+  progressBg: { height: 4, borderRadius: 2, marginTop: 4, overflow: "hidden" },
   progressFill: { height: "100%", borderRadius: 2 },
   healthRow: {
     flexDirection: "row",
@@ -751,16 +782,10 @@ const styles = StyleSheet.create({
     gap: Spacing.sm,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
-    backgroundColor: "#E3F2FD",
     borderRadius: BorderRadius.md,
     padding: Spacing.md,
   },
-  infoText: {
-    flex: 1,
-    fontSize: FontSize.xs,
-    color: "#1565C0",
-    lineHeight: 18,
-  },
+  infoText: { flex: 1, fontSize: FontSize.xs, lineHeight: 18 },
 
   chartCard: { marginTop: Spacing.sm },
   chartHeader: {
@@ -769,32 +794,21 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: Spacing.md,
   },
-  chartTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-  },
+  chartTitle: { fontSize: FontSize.lg, fontWeight: "600" },
   legendRow: { flexDirection: "row", gap: Spacing.sm },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 4 },
   legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: FontSize.xs, color: Colors.textSecondary },
+  legendText: { fontSize: FontSize.xs },
 
   catList: { gap: Spacing.sm },
   catRow: { flexDirection: "row", alignItems: "center", gap: Spacing.sm },
-  catName: { width: 90, fontSize: FontSize.sm, color: Colors.textPrimary },
-  catBarWrap: {
-    flex: 1,
-    height: 8,
-    backgroundColor: Colors.borderLight,
-    borderRadius: 4,
-    overflow: "hidden",
-  },
+  catName: { width: 90, fontSize: FontSize.sm },
+  catBarWrap: { flex: 1, height: 8, borderRadius: 4, overflow: "hidden" },
   catBar: { height: "100%", borderRadius: 4 },
   catTotal: {
     width: 70,
     fontSize: FontSize.sm,
     fontWeight: "600",
-    color: Colors.textPrimary,
     textAlign: "right",
   },
 
@@ -827,7 +841,6 @@ const styles = StyleSheet.create({
     justifyContent: "flex-end",
   },
   calendarSheet: {
-    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.lg,
@@ -839,27 +852,19 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     marginBottom: Spacing.sm,
   },
-  calTitle: {
-    fontSize: FontSize.lg,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  calTitle: { fontSize: FontSize.lg, fontWeight: "bold" },
   calSubtitle: {
     fontSize: FontSize.xs,
-    color: Colors.textMuted,
     marginBottom: Spacing.md,
     textAlign: "center",
   },
-
   calWeekRow: { flexDirection: "row", marginBottom: Spacing.sm },
   calWeekDay: {
     flex: 1,
     textAlign: "center",
     fontSize: FontSize.xs,
     fontWeight: "600",
-    color: Colors.textMuted,
   },
-
   calDayGrid: { flexDirection: "row", flexWrap: "wrap" },
   calDay: {
     width: "14.28%",
@@ -868,17 +873,15 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     borderRadius: 8,
   },
-  calDayText: {
-    fontSize: 10,
-    color: Colors.textPrimary,
-    textAlign: "center",
-    lineHeight: 14,
-  },
+  calDayText: { fontSize: FontSize.xs, textAlign: "center" },
   calDaySelected: { backgroundColor: Colors.primary },
   calDaySelectedText: { color: Colors.white, fontWeight: "bold" },
-  calDayToday: { backgroundColor: Colors.surfaceSecondary },
-  calDayTodayText: { color: Colors.primary, fontWeight: "600" },
-
+  calDayLabel: {
+    fontSize: 9,
+    textAlign: "center",
+    textTransform: "capitalize",
+  },
+  calDayNum: { fontSize: 13, fontWeight: "600", textAlign: "center" },
   calMonthGrid: { flexDirection: "row", flexWrap: "wrap", gap: Spacing.sm },
   calMonthItem: {
     width: "30%",
@@ -886,36 +889,13 @@ const styles = StyleSheet.create({
     alignItems: "center",
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  calMonthText: {
-    fontSize: FontSize.sm,
-    fontWeight: "500",
-    color: Colors.textPrimary,
-  },
-
+  calMonthText: { fontSize: FontSize.sm, fontWeight: "500" },
   calClose: {
     marginTop: Spacing.lg,
     alignItems: "center",
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.background,
     borderRadius: BorderRadius.lg,
   },
-  calCloseText: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
-  calDayLabel: {
-  fontSize: 9,
-  color: Colors.textMuted,
-  textAlign: 'center',
-  textTransform: 'capitalize',
-},
-calDayNum: {
-  fontSize: 13,
-  fontWeight: '600',
-  color: Colors.textPrimary,
-  textAlign: 'center',
-},
+  calCloseText: { fontSize: FontSize.md, fontWeight: "600" },
 });

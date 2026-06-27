@@ -448,12 +448,11 @@ export default function SettingsScreen() {
                 style={[
                   styles.curItem,
                   d.surface,
-                  currency === item.code && styles.curItemActive,
+                  currency === item.code && {
+                    borderColor: C.primary,
+                    backgroundColor: isDarkMode ? "#1a2744" : "#EEF4FF",
+                  },
                 ]}
-                onPress={() => {
-                  setCurrency(item.code);
-                  setActiveModal(null);
-                }}
               >
                 <View
                   style={[
@@ -1064,7 +1063,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "transparent",
   },
-  curItemActive: { borderColor: "#1565C0", backgroundColor: "#EEF4FF" }, //este es el que hay cambiar
   curBadge: {
     borderRadius: 8,
     paddingHorizontal: 8,

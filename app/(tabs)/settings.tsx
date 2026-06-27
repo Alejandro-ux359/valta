@@ -164,11 +164,7 @@ export default function SettingsScreen() {
         <View style={[styles.card, d.surface]}>
           <View style={styles.modeRow}>
             <TouchableOpacity
-              style={[
-                styles.modeBtn,
-                d.border,
-                !isDarkMode && styles.modeBtnActive,
-              ]}
+              style={[styles.modeBtn, d.border, !isDarkMode && { borderColor: C.primary, backgroundColor: isDarkMode ? '#1a2744' : '#EEF4FF' }]}
               onPress={() => {
                 if (isDarkMode) toggleDarkMode();
               }}
@@ -188,11 +184,7 @@ export default function SettingsScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[
-                styles.modeBtn,
-                d.border,
-                isDarkMode && styles.modeBtnActive,
-              ]}
+              style={[styles.modeBtn, d.border, isDarkMode && { borderColor: C.primary, backgroundColor: isDarkMode ? '#1a2744' : '#EEF4FF' }]}
               onPress={() => {
                 if (!isDarkMode) toggleDarkMode();
               }}
@@ -954,7 +946,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     borderWidth: 1.5,
   },
-  modeBtnActive: { borderColor: "#1565C0", backgroundColor: "#EEF4FF" },
   modeBtnText: { fontSize: FontSize.sm, fontWeight: "500" },
 
   // Moneda

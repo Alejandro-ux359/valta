@@ -13,6 +13,7 @@ import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/lib/constants/theme";
+import { useColors } from "@/lib/hooks/useColors";
 import { getDebts, markDebtAsPaid } from "@/lib/database/debts";
 import { Debt } from "@/components/cards/DebtItem";
 import { Button } from "@/components/ui/Button";
@@ -39,6 +40,9 @@ const PERIODS: { key: PeriodFilter; label: string }[] = [
 ];
 
 export default function RegisterPaymentModal() {
+  const C = useColors();
+  const insets = useSafeAreaInsets();
+
   const [allDebts, setAllDebts] = useState<Debt[]>([]);
   const [tab, setTab] = useState<TabType>("pending");
   const [selected, setSelected] = useState<number | null>(null);
@@ -46,7 +50,6 @@ export default function RegisterPaymentModal() {
   const [search, setSearch] = useState("");
   const [period, setPeriod] = useState<PeriodFilter>("all");
   const [showCalendar, setShowCalendar] = useState(false);
-  const insets = useSafeAreaInsets();
 
   const loadDebts = useCallback(async () => {
     const all = await getDebts();
@@ -57,7 +60,6 @@ export default function RegisterPaymentModal() {
     loadDebts();
   }, [loadDebts]);
 
-  // ── Filtros ──────────────────────────────
   const applyPeriod = (debt: Debt): boolean => {
     if (period === "all") return true;
     const dateStr = debt.due_date;
@@ -113,7 +115,6 @@ export default function RegisterPaymentModal() {
     .filter((d) => d.type === "receivable")
     .reduce((s, d) => s + d.amount, 0);
 
-  // ── Pagar ────────────────────────────────
   const handlePay = async () => {
     if (!selected) {
       Alert.alert("Selecciona", "Elige una deuda primero");
@@ -153,47 +154,62 @@ export default function RegisterPaymentModal() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.root, { backgroundColor: C.background }]}>
       {/* ── HEADER ── */}
-      <View style={styles.header}>
+      <View
+        style={[
+          styles.header,
+          {
+            backgroundColor: C.white,
+            borderBottomColor: C.border,
+            paddingTop: insets.top + 12,
+          },
+        ]}
+      >
         <TouchableOpacity
-          style={styles.headerBtn}
+          style={[styles.headerBtn, { backgroundColor: C.background }]}
           onPress={() => router.back()}
         >
-          <MaterialIcons name="close" size={22} color={Colors.textSecondary} />
+          <MaterialIcons name="close" size={22} color={C.textSecondary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Mis Pagos</Text>
+        <Text style={[styles.title, { color: C.textPrimary }]}>Mis Pagos</Text>
         <TouchableOpacity
-          style={styles.headerBtn}
+          style={[styles.headerBtn, { backgroundColor: C.background }]}
           onPress={() => setShowCalendar(true)}
         >
-          <MaterialIcons
-            name="calendar-today"
-            size={22}
-            color={Colors.primary}
-          />
+          <MaterialIcons name="calendar-today" size={22} color={C.primary} />
         </TouchableOpacity>
       </View>
 
       {/* ── BUSCADOR ── */}
-      <View style={styles.searchWrap}>
-        <MaterialIcons name="search" size={18} color={Colors.textMuted} />
+      <View
+        style={[
+          styles.searchWrap,
+          { backgroundColor: C.white, borderColor: C.border },
+        ]}
+      >
+        <MaterialIcons name="search" size={18} color={C.textMuted} />
         <TextInput
-          style={styles.searchInput}
+          style={[styles.searchInput, { color: C.textPrimary }]}
           placeholder="Buscar por nombre, descripción..."
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor={C.textMuted}
           value={search}
           onChangeText={setSearch}
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch("")}>
-            <MaterialIcons name="cancel" size={16} color={Colors.textMuted} />
+            <MaterialIcons name="cancel" size={16} color={C.textMuted} />
           </TouchableOpacity>
         )}
       </View>
 
       {/* ── TABS ── */}
-      <View style={styles.tabRow}>
+      <View
+        style={[
+          styles.tabRow,
+          { backgroundColor: C.white, borderColor: C.border },
+        ]}
+      >
         <TouchableOpacity
           style={[styles.tab, tab === "pending" && styles.tabActive]}
           onPress={() => {
@@ -202,7 +218,10 @@ export default function RegisterPaymentModal() {
           }}
         >
           <Text
-            style={[styles.tabText, tab === "pending" && styles.tabTextActive]}
+            style={[
+              styles.tabText,
+              { color: tab === "pending" ? Colors.white : C.textSecondary },
+            ]}
           >
             Pendiente
           </Text>
@@ -218,7 +237,10 @@ export default function RegisterPaymentModal() {
           }}
         >
           <Text
-            style={[styles.tabText, tab === "history" && styles.tabTextActive]}
+            style={[
+              styles.tabText,
+              { color: tab === "history" ? Colors.white : C.textSecondary },
+            ]}
           >
             Historial
           </Text>
@@ -226,13 +248,18 @@ export default function RegisterPaymentModal() {
             <View
               style={[
                 styles.tabCount,
-                tab === "history" && styles.tabCountActive,
+                {
+                  backgroundColor:
+                    tab === "history"
+                      ? "rgba(255,255,255,0.25)"
+                      : C.borderLight,
+                },
               ]}
             >
               <Text
                 style={[
                   styles.tabCountText,
-                  tab === "history" && { color: Colors.white },
+                  { color: tab === "history" ? Colors.white : C.textSecondary },
                 ]}
               >
                 {history.length}
@@ -243,24 +270,41 @@ export default function RegisterPaymentModal() {
       </View>
 
       {/* ── RESUMEN ── */}
-      <View style={styles.summaryRow}>
+      <View
+        style={[
+          styles.summaryRow,
+          { backgroundColor: C.white, borderColor: C.borderLight },
+        ]}
+      >
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Por pagar</Text>
+          <Text style={[styles.summaryLabel, { color: C.textMuted }]}>
+            Por pagar
+          </Text>
           <Text style={[styles.summaryValue, { color: Colors.danger }]}>
             ${totalPayable.toFixed(2)}
           </Text>
         </View>
-        <View style={styles.summaryDivider} />
+        <View
+          style={[styles.summaryDivider, { backgroundColor: C.borderLight }]}
+        />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Por cobrar</Text>
+          <Text style={[styles.summaryLabel, { color: C.textMuted }]}>
+            Por cobrar
+          </Text>
           <Text style={[styles.summaryValue, { color: Colors.success }]}>
             ${totalReceivable.toFixed(2)}
           </Text>
         </View>
-        <View style={styles.summaryDivider} />
+        <View
+          style={[styles.summaryDivider, { backgroundColor: C.borderLight }]}
+        />
         <View style={styles.summaryItem}>
-          <Text style={styles.summaryLabel}>Registro</Text>
-          <Text style={styles.summaryValue}>{shown.length}</Text>
+          <Text style={[styles.summaryLabel, { color: C.textMuted }]}>
+            Registro
+          </Text>
+          <Text style={[styles.summaryValue, { color: C.textPrimary }]}>
+            {shown.length}
+          </Text>
         </View>
       </View>
 
@@ -268,7 +312,7 @@ export default function RegisterPaymentModal() {
       <ScrollView
         style={styles.list}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 120 }}
+        contentContainerStyle={{ paddingBottom: 20 }}
       >
         {shown.length === 0 ? (
           <EmptyState
@@ -287,35 +331,30 @@ export default function RegisterPaymentModal() {
             const isSelected = selected === debt.id;
             const isPayable = debt.type === "payable";
             const isPaid = debt.status === "paid";
+            const accentColor = isPaid
+              ? Colors.success
+              : isPayable
+                ? Colors.danger
+                : Colors.success;
 
             return (
               <TouchableOpacity
                 key={debt.id}
                 style={[
                   styles.card,
-                  isSelected && styles.cardSelected,
-                  isPaid && styles.cardPaid,
+                  { backgroundColor: C.white },
+                  isSelected && { borderColor: C.primary },
+                  isPaid && { opacity: 0.8 },
                 ]}
                 onPress={() =>
                   !isPaid && setSelected(isSelected ? null : (debt.id ?? null))
                 }
                 activeOpacity={isPaid ? 1 : 0.75}
               >
-                {/* Línea lateral de color */}
                 <View
-                  style={[
-                    styles.cardAccent,
-                    {
-                      backgroundColor: isPaid
-                        ? Colors.success
-                        : isPayable
-                          ? Colors.danger
-                          : Colors.success,
-                    },
-                  ]}
+                  style={[styles.cardAccent, { backgroundColor: accentColor }]}
                 />
 
-                {/* Avatar */}
                 <View
                   style={[
                     styles.avatar,
@@ -328,26 +367,19 @@ export default function RegisterPaymentModal() {
                     },
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.initials,
-                      {
-                        color: isPaid
-                          ? Colors.success
-                          : isPayable
-                            ? Colors.danger
-                            : Colors.success,
-                      },
-                    ]}
-                  >
+                  <Text style={[styles.initials, { color: accentColor }]}>
                     {debt.contact_name.slice(0, 2).toUpperCase()}
                   </Text>
                 </View>
 
-                {/* Info */}
                 <View style={styles.cardInfo}>
-                  <Text style={styles.cardName}>{debt.contact_name}</Text>
-                  <Text style={styles.cardDesc} numberOfLines={1}>
+                  <Text style={[styles.cardName, { color: C.textPrimary }]}>
+                    {debt.contact_name}
+                  </Text>
+                  <Text
+                    style={[styles.cardDesc, { color: C.textSecondary }]}
+                    numberOfLines={1}
+                  >
                     {debt.description || "Sin descripción"}
                   </Text>
                   {debt.due_date && (
@@ -355,12 +387,12 @@ export default function RegisterPaymentModal() {
                       <MaterialIcons
                         name={isPaid ? "check-circle" : "event"}
                         size={11}
-                        color={isPaid ? Colors.success : Colors.textMuted}
+                        color={isPaid ? Colors.success : C.textMuted}
                       />
                       <Text
                         style={[
                           styles.cardDateText,
-                          isPaid && { color: Colors.success },
+                          { color: isPaid ? Colors.success : C.textMuted },
                         ]}
                       >
                         {isPaid ? "Pagado" : "Vence"}{" "}
@@ -372,14 +404,13 @@ export default function RegisterPaymentModal() {
                   )}
                 </View>
 
-                {/* Derecha */}
                 <View style={styles.cardRight}>
                   <Text
                     style={[
                       styles.cardAmount,
                       {
                         color: isPaid
-                          ? Colors.textMuted
+                          ? C.textMuted
                           : isPayable
                             ? Colors.danger
                             : Colors.success,
@@ -388,7 +419,6 @@ export default function RegisterPaymentModal() {
                   >
                     {isPayable ? "-" : "+"}${debt.amount.toFixed(2)}
                   </Text>
-
                   <View
                     style={[
                       styles.statusPill,
@@ -402,11 +432,13 @@ export default function RegisterPaymentModal() {
                     <Text
                       style={[
                         styles.statusText,
-                        isPaid
-                          ? { color: Colors.success }
-                          : debt.status === "overdue"
-                            ? { color: Colors.danger }
-                            : { color: "#F57F17" },
+                        {
+                          color: isPaid
+                            ? Colors.success
+                            : debt.status === "overdue"
+                              ? Colors.danger
+                              : "#F57F17",
+                        },
                       ]}
                     >
                       {isPaid
@@ -416,13 +448,14 @@ export default function RegisterPaymentModal() {
                           : "PENDIENTE"}
                     </Text>
                   </View>
-
-                  {/* Selector */}
                   {!isPaid && (
                     <View
                       style={[
                         styles.selector,
-                        isSelected && styles.selectorActive,
+                        isSelected && {
+                          backgroundColor: C.primary,
+                          borderColor: C.primary,
+                        },
                       ]}
                     >
                       {isSelected && (
@@ -441,10 +474,17 @@ export default function RegisterPaymentModal() {
         )}
       </ScrollView>
 
-      {/* ── FOOTER ── */}
+      {/* ── FOOTER — respeta área segura ── */}
       {tab === "pending" && (
         <View
-          style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}
+          style={[
+            styles.footer,
+            {
+              backgroundColor: C.white,
+              borderTopColor: C.border,
+              paddingBottom: insets.bottom + Spacing.sm,
+            },
+          ]}
         >
           {selected && (
             <View style={styles.selectedBanner}>
@@ -482,15 +522,22 @@ export default function RegisterPaymentModal() {
           activeOpacity={1}
           onPress={() => setShowCalendar(false)}
         >
-          <View style={styles.calendarSheet}>
-            <Text style={styles.calendarTitle}>Filtrar por período</Text>
+          <View style={[styles.calendarSheet, { backgroundColor: C.white }]}>
+            <Text style={[styles.calendarTitle, { color: C.textPrimary }]}>
+              Filtrar por período
+            </Text>
 
             {PERIODS.map((opt) => (
               <TouchableOpacity
                 key={opt.key}
                 style={[
                   styles.calendarOption,
-                  period === opt.key && styles.calendarOptionActive,
+                  { borderBottomColor: C.borderLight },
+                  period === opt.key && {
+                    backgroundColor: C.surfaceSecondary,
+                    borderRadius: BorderRadius.md,
+                    paddingHorizontal: Spacing.sm,
+                  },
                 ]}
                 onPress={() => {
                   setPeriod(opt.key);
@@ -504,13 +551,14 @@ export default function RegisterPaymentModal() {
                       : "radio-button-unchecked"
                   }
                   size={20}
-                  color={period === opt.key ? Colors.primary : Colors.textMuted}
+                  color={period === opt.key ? C.primary : C.textMuted}
                 />
                 <Text
                   style={[
                     styles.calendarOptionText,
+                    { color: C.textPrimary },
                     period === opt.key && {
-                      color: Colors.primary,
+                      color: C.primary,
                       fontWeight: "600",
                     },
                   ]}
@@ -521,7 +569,7 @@ export default function RegisterPaymentModal() {
                   <MaterialIcons
                     name="check"
                     size={18}
-                    color={Colors.primary}
+                    color={C.primary}
                     style={{ marginLeft: "auto" }}
                   />
                 )}
@@ -529,10 +577,14 @@ export default function RegisterPaymentModal() {
             ))}
 
             <TouchableOpacity
-              style={styles.calendarClose}
+              style={[styles.calendarClose, { backgroundColor: C.background }]}
               onPress={() => setShowCalendar(false)}
             >
-              <Text style={styles.calendarCloseText}>Cerrar</Text>
+              <Text
+                style={[styles.calendarCloseText, { color: C.textSecondary }]}
+              >
+                Cerrar
+              </Text>
             </TouchableOpacity>
           </View>
         </TouchableOpacity>
@@ -542,65 +594,45 @@ export default function RegisterPaymentModal() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1 },
 
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: Spacing.md,
-    paddingTop: 56,
     paddingBottom: Spacing.md,
-    backgroundColor: Colors.white,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   headerBtn: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: Colors.background,
     alignItems: "center",
     justifyContent: "center",
   },
-  title: {
-    fontSize: FontSize.lg,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  title: { fontSize: FontSize.lg, fontWeight: "bold" },
 
-  // Buscador
   searchWrap: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
-    backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.md,
     borderRadius: BorderRadius.lg,
     paddingHorizontal: Spacing.md,
     paddingVertical: 10,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
-  searchInput: {
-    flex: 1,
-    fontSize: FontSize.sm,
-    color: Colors.textPrimary,
-    padding: 0,
-  },
+  searchInput: { flex: 1, fontSize: FontSize.sm, padding: 0 },
 
-  // Tabs
   tabRow: {
     flexDirection: "row",
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
-    backgroundColor: Colors.white,
     borderRadius: BorderRadius.lg,
     padding: 4,
     borderWidth: 1,
-    borderColor: Colors.border,
   },
   tab: {
     flex: 1,
@@ -612,12 +644,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   tabActive: { backgroundColor: Colors.primary },
-  tabText: {
-    fontSize: FontSize.sm,
-    fontWeight: "500",
-    color: Colors.textSecondary,
-  },
-  tabTextActive: { color: Colors.white, fontWeight: "600" },
+  tabText: { fontSize: FontSize.sm, fontWeight: "500" },
   tabDot: {
     width: 6,
     height: 6,
@@ -625,7 +652,6 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.danger,
   },
   tabCount: {
-    backgroundColor: Colors.borderLight,
     borderRadius: 10,
     minWidth: 20,
     height: 20,
@@ -633,46 +659,27 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     paddingHorizontal: 5,
   },
-  tabCountActive: { backgroundColor: "rgba(58, 223, 17, 0.88)" },
-  tabCountText: {
-    fontSize: 11,
-    fontWeight: "bold",
-    color: Colors.textSecondary,
-  },
+  tabCountText: { fontSize: 11, fontWeight: "bold" },
 
-  // Resumen
   summaryRow: {
     flexDirection: "row",
-    backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginTop: Spacing.sm,
     borderRadius: BorderRadius.lg,
     paddingVertical: Spacing.sm + 2,
     paddingHorizontal: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
   },
   summaryItem: { flex: 1, alignItems: "center", gap: 2 },
-  summaryLabel: { fontSize: 11, color: Colors.textMuted },
-  summaryValue: {
-    fontSize: FontSize.md,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
-  summaryDivider: {
-    width: 1,
-    backgroundColor: Colors.borderLight,
-    marginVertical: 4,
-  },
+  summaryLabel: { fontSize: 11 },
+  summaryValue: { fontSize: FontSize.md, fontWeight: "bold" },
+  summaryDivider: { width: 1, marginVertical: 4 },
 
-  // Lista
   list: { flex: 1, marginTop: Spacing.sm },
 
-  // Card
   card: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: Colors.white,
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
     borderRadius: BorderRadius.lg,
@@ -680,8 +687,6 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: "transparent",
   },
-  cardSelected: { borderColor: Colors.primary },
-  cardPaid: { opacity: 0.8 },
   cardAccent: { width: 4, alignSelf: "stretch" },
   avatar: {
     width: 42,
@@ -698,23 +703,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.sm,
     paddingVertical: Spacing.md,
   },
-  cardName: {
-    fontSize: FontSize.sm,
-    fontWeight: "600",
-    color: Colors.textPrimary,
-  },
-  cardDesc: {
-    fontSize: FontSize.xs,
-    color: Colors.textSecondary,
-    marginTop: 1,
-  },
+  cardName: { fontSize: FontSize.sm, fontWeight: "600" },
+  cardDesc: { fontSize: FontSize.xs, marginTop: 1 },
   cardDate: {
     flexDirection: "row",
     alignItems: "center",
     gap: 3,
     marginTop: 4,
   },
-  cardDateText: { fontSize: 11, color: Colors.textMuted },
+  cardDateText: { fontSize: 11 },
   cardRight: {
     alignItems: "flex-end",
     paddingRight: Spacing.md,
@@ -723,7 +720,6 @@ const styles = StyleSheet.create({
   },
   cardAmount: { fontSize: FontSize.sm, fontWeight: "bold" },
 
-  // Status pill
   statusPill: {
     borderRadius: BorderRadius.full,
     paddingHorizontal: 7,
@@ -734,7 +730,6 @@ const styles = StyleSheet.create({
   statusPending: { backgroundColor: "#FFF8E1" },
   statusText: { fontSize: 9, fontWeight: "700", letterSpacing: 0.3 },
 
-  // Selector
   selector: {
     width: 20,
     height: 20,
@@ -750,14 +745,7 @@ const styles = StyleSheet.create({
     borderColor: Colors.primary,
   },
 
-  // Footer
-  footer: {
-    padding: Spacing.md,
-    backgroundColor: Colors.white,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    gap: Spacing.sm,
-  },
+  footer: { padding: Spacing.md, borderTopWidth: 1, gap: Spacing.sm },
   selectedBanner: {
     flexDirection: "row",
     alignItems: "center",
@@ -774,14 +762,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Modal calendario
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.45)",
     justifyContent: "flex-end",
   },
   calendarSheet: {
-    backgroundColor: Colors.white,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.lg,
@@ -790,7 +776,6 @@ const styles = StyleSheet.create({
   calendarTitle: {
     fontSize: FontSize.lg,
     fontWeight: "bold",
-    color: Colors.textPrimary,
     marginBottom: Spacing.lg,
   },
   calendarOption: {
@@ -799,24 +784,13 @@ const styles = StyleSheet.create({
     gap: Spacing.md,
     paddingVertical: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
   },
-  calendarOptionActive: {
-    backgroundColor: "#F0F4FF",
-    borderRadius: BorderRadius.md,
-    paddingHorizontal: Spacing.sm,
-  },
-  calendarOptionText: { fontSize: FontSize.md, color: Colors.textPrimary },
+  calendarOptionText: { fontSize: FontSize.md },
   calendarClose: {
     marginTop: Spacing.lg,
     alignItems: "center",
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.background,
     borderRadius: BorderRadius.lg,
   },
-  calendarCloseText: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
+  calendarCloseText: { fontSize: FontSize.md, fontWeight: "600" },
 });

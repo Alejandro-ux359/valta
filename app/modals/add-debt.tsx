@@ -12,6 +12,7 @@ import { router } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/lib/constants/theme";
+import { useColors } from "@/lib/hooks/useColors";
 import { addDebt } from "@/lib/database/debts";
 import { scheduleDebtReminder } from "@/lib/notifications";
 import { AmountInput } from "@/components/forms/AmountInput";
@@ -21,6 +22,7 @@ import { format } from "date-fns";
 type DebtType = "payable" | "receivable";
 
 export default function AddDebtModal() {
+  const C = useColors();
   const [debtType, setDebtType] = useState<DebtType>("payable");
   const [amount, setAmount] = useState("");
   const [amountError, setAmountError] = useState("");
@@ -56,11 +58,8 @@ export default function AddDebtModal() {
         due_date: dueDate || format(new Date(), "yyyy-MM-dd"),
         status: "pending",
       });
-
-      if (debtType === "payable" && dueDate) {
+      if (debtType === "payable" && dueDate)
         await scheduleDebtReminder(contactName.trim(), num, dueDate);
-      }
-
       router.back();
     } catch {
       Alert.alert("Error", "No se pudo guardar la deuda");
@@ -70,13 +69,19 @@ export default function AddDebtModal() {
   };
 
   return (
-    <View style={styles.container}>
-      {/* Header */}
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: C.white }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: C.white, borderBottomColor: C.border },
+        ]}
+      >
         <TouchableOpacity onPress={() => router.back()}>
-          <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+          <MaterialIcons name="close" size={24} color={C.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>Agregar Deuda</Text>
+        <Text style={[styles.title, { color: C.textPrimary }]}>
+          Agregar Deuda
+        </Text>
         <View style={{ width: 24 }} />
       </View>
 
@@ -85,12 +90,14 @@ export default function AddDebtModal() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* Tipo de deuda */}
-        <Text style={styles.label}>Tipo de deuda</Text>
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Tipo de deuda
+        </Text>
         <View style={styles.typeRow}>
           <TouchableOpacity
             style={[
               styles.typeBtn,
+              { borderColor: C.border },
               debtType === "payable" && styles.typeBtnDanger,
             ]}
             onPress={() => setDebtType("payable")}
@@ -103,16 +110,17 @@ export default function AddDebtModal() {
             <Text
               style={[
                 styles.typeBtnText,
+                { color: C.textSecondary },
                 debtType === "payable" && { color: Colors.white },
               ]}
             >
               Debo yo
             </Text>
           </TouchableOpacity>
-
           <TouchableOpacity
             style={[
               styles.typeBtn,
+              { borderColor: C.border },
               debtType === "receivable" && styles.typeBtnSuccess,
             ]}
             onPress={() => setDebtType("receivable")}
@@ -125,6 +133,7 @@ export default function AddDebtModal() {
             <Text
               style={[
                 styles.typeBtnText,
+                { color: C.textSecondary },
                 debtType === "receivable" && { color: Colors.white },
               ]}
             >
@@ -133,45 +142,47 @@ export default function AddDebtModal() {
           </TouchableOpacity>
         </View>
 
-        {/* Monto */}
         <AmountInput value={amount} onChange={setAmount} error={amountError} />
 
-        {/* Nombre */}
-        <Text style={styles.label}>Nombre del contacto</Text>
-        <View style={styles.inputRow}>
-          <MaterialIcons name="person" size={20} color={Colors.textMuted} />
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Nombre del contacto
+        </Text>
+        <View style={[styles.inputRow, { borderColor: C.border }]}>
+          <MaterialIcons name="person" size={20} color={C.textMuted} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: C.textPrimary }]}
             value={contactName}
             onChangeText={setContactName}
             placeholder="Ej: Juan Pérez"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={C.textMuted}
           />
         </View>
 
-        {/* Descripción */}
-        <Text style={styles.label}>Descripción</Text>
-        <View style={styles.inputRow}>
-          <MaterialIcons name="notes" size={20} color={Colors.textMuted} />
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Descripción
+        </Text>
+        <View style={[styles.inputRow, { borderColor: C.border }]}>
+          <MaterialIcons name="notes" size={20} color={C.textMuted} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: C.textPrimary }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Ej: Préstamo personal"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={C.textMuted}
           />
         </View>
 
-        {/* Fecha */}
-        <Text style={styles.label}>Fecha de vencimiento</Text>
-        <View style={styles.inputRow}>
-          <MaterialIcons name="event" size={20} color={Colors.textMuted} />
+        <Text style={[styles.label, { color: C.textSecondary }]}>
+          Fecha de vencimiento
+        </Text>
+        <View style={[styles.inputRow, { borderColor: C.border }]}>
+          <MaterialIcons name="event" size={20} color={C.textMuted} />
           <TextInput
-            style={styles.input}
+            style={[styles.input, { color: C.textPrimary }]}
             value={dueDate}
             onChangeText={setDueDate}
             placeholder="YYYY-MM-DD  Ej: 2025-01-31"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={C.textMuted}
             keyboardType="numbers-and-punctuation"
           />
         </View>
@@ -179,9 +190,15 @@ export default function AddDebtModal() {
         <View style={{ height: Spacing.xl }} />
       </ScrollView>
 
-      {/* Footer respetando área segura */}
       <View
-        style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}
+        style={[
+          styles.footer,
+          {
+            backgroundColor: C.white,
+            borderTopColor: C.border,
+            paddingBottom: insets.bottom + Spacing.sm,
+          },
+        ]}
       >
         <Button
           label={loading ? "Guardando..." : "Guardar Deuda"}
@@ -195,7 +212,7 @@ export default function AddDebtModal() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -203,27 +220,18 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     paddingTop: 56,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
-  title: {
-    fontSize: FontSize.lg,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  title: { fontSize: FontSize.lg, fontWeight: "bold" },
   content: { flex: 1, paddingHorizontal: Spacing.md },
   label: {
     fontSize: FontSize.xs,
     fontWeight: "600",
-    color: Colors.textSecondary,
     marginTop: Spacing.lg,
     marginBottom: Spacing.sm,
     textTransform: "uppercase",
     letterSpacing: 0.5,
   },
-  typeRow: {
-    flexDirection: "row",
-    gap: Spacing.sm,
-  },
+  typeRow: { flexDirection: "row", gap: Spacing.sm },
   typeBtn: {
     flex: 1,
     flexDirection: "row",
@@ -233,36 +241,22 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     borderRadius: BorderRadius.lg,
     borderWidth: 2,
-    borderColor: Colors.border,
   },
-  typeBtnDanger: {
-    backgroundColor: Colors.danger,
-    borderColor: Colors.danger,
-  },
+  typeBtnDanger: { backgroundColor: Colors.danger, borderColor: Colors.danger },
   typeBtnSuccess: {
     backgroundColor: Colors.success,
     borderColor: Colors.success,
   },
-  typeBtnText: {
-    fontSize: FontSize.md,
-    fontWeight: "600",
-    color: Colors.textSecondary,
-  },
+  typeBtnText: { fontSize: FontSize.md, fontWeight: "600" },
   inputRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
   },
-  input: { flex: 1, fontSize: FontSize.md, color: Colors.textPrimary },
-  footer: {
-    padding: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
+  input: { flex: 1, fontSize: FontSize.md },
+  footer: { padding: Spacing.md, borderTopWidth: 1 },
 });

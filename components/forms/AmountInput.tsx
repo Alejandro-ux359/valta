@@ -1,5 +1,6 @@
 import { View, Text, TextInput, StyleSheet } from "react-native";
-import { Colors, FontSize, Spacing } from "@/lib/constants/theme";
+import { FontSize, BorderRadius, Spacing } from "@/lib/constants/theme";
+import { useColors } from "@/lib/hooks/useColors";
 
 interface AmountInputProps {
   value: string;
@@ -14,21 +15,25 @@ export function AmountInput({
   currency = "$",
   error,
 }: AmountInputProps) {
+  const C = useColors();
+
   return (
     <View style={styles.wrapper}>
       <View style={styles.row}>
-        <Text style={styles.symbol}>{currency}</Text>
+        <Text style={[styles.symbol, { color: C.danger }]}>{currency}</Text>
         <TextInput
-          style={styles.input}
+          style={[styles.input, { color: C.textPrimary }]}
           value={value}
           onChangeText={onChange}
           placeholder="0.00"
-          placeholderTextColor={Colors.textMuted}
+          placeholderTextColor={C.textMuted}
           keyboardType="decimal-pad"
           autoFocus
         />
       </View>
-      {error && <Text style={styles.error}>{error}</Text>}
+      {error ? (
+        <Text style={[styles.error, { color: C.danger }]}>{error}</Text>
+      ) : null}
     </View>
   );
 }
@@ -36,22 +41,12 @@ export function AmountInput({
 const styles = StyleSheet.create({
   wrapper: { alignItems: "center", paddingVertical: Spacing.xl },
   row: { flexDirection: "row", alignItems: "center" },
-  symbol: {
-    fontSize: 32,
-    fontWeight: "bold",
-    color: Colors.danger,
-    marginRight: 4,
-  },
+  symbol: { fontSize: 32, fontWeight: "bold", marginRight: 4 },
   input: {
     fontSize: 52,
     fontWeight: "bold",
-    color: Colors.textPrimary,
     minWidth: 120,
     textAlign: "center",
   },
-  error: {
-    fontSize: FontSize.sm,
-    color: Colors.danger,
-    marginTop: Spacing.sm,
-  },
+  error: { fontSize: FontSize.sm, marginTop: Spacing.sm },
 });

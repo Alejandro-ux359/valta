@@ -12,6 +12,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/lib/constants/theme";
+import { useColors } from "@/lib/hooks/useColors";
 import {
   addTransaction,
   updateTransaction,
@@ -35,7 +36,7 @@ const CATEGORIES = [
 ];
 
 export default function AddExpenseModal() {
-  // Si viene con ?id=X estamos editando
+  const C = useColors();
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;
 
@@ -46,7 +47,6 @@ export default function AddExpenseModal() {
   const [amountError, setAmountError] = useState("");
   const insets = useSafeAreaInsets();
 
-  // Cargar datos si estamos editando
   useEffect(() => {
     if (!id) return;
     async function loadTx() {
@@ -111,12 +111,17 @@ export default function AddExpenseModal() {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: C.white }]}>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: C.white, borderBottomColor: C.border },
+        ]}
+      >
         <TouchableOpacity onPress={() => router.back()}>
-          <MaterialIcons name="close" size={24} color={Colors.textPrimary} />
+          <MaterialIcons name="close" size={24} color={C.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.title}>
+        <Text style={[styles.title, { color: C.textPrimary }]}>
           {isEditing ? "Editar Gasto" : "Agregar Gasto"}
         </Text>
         <View style={{ width: 24 }} />
@@ -125,25 +130,31 @@ export default function AddExpenseModal() {
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         <AmountInput value={amount} onChange={setAmount} error={amountError} />
 
-        <View style={styles.descRow}>
-          <MaterialIcons name="notes" size={20} color={Colors.textMuted} />
+        <View style={[styles.descRow, { borderColor: C.border }]}>
+          <MaterialIcons name="notes" size={20} color={C.textMuted} />
           <TextInput
-            style={styles.descInput}
+            style={[styles.descInput, { color: C.textPrimary }]}
             value={description}
             onChangeText={setDescription}
             placeholder="Descripción (opcional)"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={C.textMuted}
           />
         </View>
 
-        <Text style={styles.sectionLabel}>Categoría</Text>
+        <Text style={[styles.sectionLabel, { color: C.textSecondary }]}>
+          Categoría
+        </Text>
         <View style={styles.grid}>
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
               key={cat.id}
               style={[
                 styles.catItem,
-                selectedCategory === cat.id && styles.catSelected,
+                { borderColor: C.border },
+                selectedCategory === cat.id && {
+                  borderColor: Colors.danger,
+                  backgroundColor: C.surfaceSecondary,
+                },
               ]}
               onPress={() => setSelectedCategory(cat.id)}
             >
@@ -156,14 +167,23 @@ export default function AddExpenseModal() {
                   color={cat.color}
                 />
               </View>
-              <Text style={styles.catName}>{cat.name}</Text>
+              <Text style={[styles.catName, { color: C.textPrimary }]}>
+                {cat.name}
+              </Text>
             </TouchableOpacity>
           ))}
         </View>
       </ScrollView>
 
       <View
-        style={[styles.footer, { paddingBottom: insets.bottom + Spacing.sm }]}
+        style={[
+          styles.footer,
+          {
+            backgroundColor: C.white,
+            borderTopColor: C.border,
+            paddingBottom: insets.bottom + Spacing.sm,
+          },
+        ]}
       >
         <Button
           label={
@@ -183,7 +203,7 @@ export default function AddExpenseModal() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.white },
+  container: { flex: 1 },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -191,30 +211,23 @@ const styles = StyleSheet.create({
     padding: Spacing.md,
     paddingTop: 56,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
-  title: {
-    fontSize: FontSize.lg,
-    fontWeight: "bold",
-    color: Colors.textPrimary,
-  },
+  title: { fontSize: FontSize.lg, fontWeight: "bold" },
   content: { flex: 1, paddingHorizontal: Spacing.md },
   descRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: Spacing.sm,
     borderWidth: 1,
-    borderColor: Colors.border,
     borderRadius: BorderRadius.md,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm + 2,
     marginBottom: Spacing.lg,
   },
-  descInput: { flex: 1, fontSize: FontSize.md, color: Colors.textPrimary },
+  descInput: { flex: 1, fontSize: FontSize.md },
   sectionLabel: {
     fontSize: FontSize.xs,
     fontWeight: "600",
-    color: Colors.textSecondary,
     marginBottom: Spacing.sm,
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -231,9 +244,7 @@ const styles = StyleSheet.create({
     padding: Spacing.sm,
     borderRadius: BorderRadius.md,
     borderWidth: 2,
-    borderColor: Colors.border,
   },
-  catSelected: { borderColor: Colors.danger, backgroundColor: "#FFF5F5" },
   catIcon: {
     width: 44,
     height: 44,
@@ -242,16 +253,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 4,
   },
-  catName: {
-    fontSize: FontSize.xs,
-    color: Colors.textPrimary,
-    textAlign: "center",
-  },
-  footer: {
-    padding: Spacing.md,
-    paddingBottom: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: Colors.border,
-    backgroundColor: Colors.white,
-  },
+  catName: { fontSize: FontSize.xs, textAlign: "center" },
+  footer: { padding: Spacing.md, paddingBottom: Spacing.sm, borderTopWidth: 1 },
 });

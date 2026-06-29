@@ -56,11 +56,17 @@ type ModalType =
 
 export default function SettingsScreen() {
   const C = useColors();
-  const { currency, setCurrency, isDarkMode, toggleDarkMode } = useStore();
-  const insets = useSafeAreaInsets();
 
+  const insets = useSafeAreaInsets();
+  const {
+    currency,
+    setCurrency,
+    isDarkMode,
+    toggleDarkMode,
+    setUserCurrencies,
+  } = useStore();
   const [activeModal, setActiveModal] = useState<ModalType>(null);
-  const [userCurrencies, setUserCurrencies] = useState<Currency[]>(() => {
+  const [userCurrencies, setLocalCurrencies] = useState<Currency[]>(() => {
     const base = [DEFAULT_CURRENCY];
     if (currency !== "CUP") {
       const found = PRESET_CURRENCIES.find((p) => p.code === currency);
@@ -78,6 +84,15 @@ export default function SettingsScreen() {
     ...userCurrencies.filter((c) => c.code !== "CUP"),
   ];
 
+  // Wrapper que actualiza local y store a la vez
+  const updateCurrencies = (updater: (prev: Currency[]) => Currency[]) => {
+    setLocalCurrencies((prev) => {
+      const next = updater(prev);
+      setUserCurrencies(next);
+      return next;
+    });
+  };
+
   const availableToAdd = PRESET_CURRENCIES.filter(
     (p) => !allCurrencies.some((c) => c.code === p.code),
   ).filter(
@@ -92,7 +107,7 @@ export default function SettingsScreen() {
       ?.label ?? currency;
 
   const handleAddPreset = (cur: Currency) => {
-    setUserCurrencies((prev) => [...prev, cur]);
+    updateCurrencies((prev) => [...prev, cur]);
     setActiveModal("currency");
     setCurrencySearch("");
   };
@@ -111,7 +126,7 @@ export default function SettingsScreen() {
       Alert.alert("Error", "Ya existe esa moneda");
       return;
     }
-    setUserCurrencies((prev) => [...prev, custom]);
+    updateCurrencies((prev) => [...prev, custom]);
     setNewCode("");
     setNewLabel("");
     setNewSymbol("");
@@ -124,7 +139,7 @@ export default function SettingsScreen() {
       return;
     }
     if (currency === code) setCurrency("CUP");
-    setUserCurrencies((prev) => prev.filter((c) => c.code !== code));
+    updateCurrencies((prev) => prev.filter((c) => c.code !== code));
   };
 
   // ── Estilos dinámicos según el modo ──────────────────────────
@@ -164,7 +179,14 @@ export default function SettingsScreen() {
         <View style={[styles.card, d.surface]}>
           <View style={styles.modeRow}>
             <TouchableOpacity
-              style={[styles.modeBtn, d.border, !isDarkMode && { borderColor: C.primary, backgroundColor: isDarkMode ? '#1a2744' : '#EEF4FF' }]}
+              style={[
+                styles.modeBtn,
+                d.border,
+                !isDarkMode && {
+                  borderColor: C.primary,
+                  backgroundColor: isDarkMode ? "#1a2744" : "#EEF4FF",
+                },
+              ]}
               onPress={() => {
                 if (isDarkMode) toggleDarkMode();
               }}
@@ -184,7 +206,14 @@ export default function SettingsScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.modeBtn, d.border, isDarkMode && { borderColor: C.primary, backgroundColor: isDarkMode ? '#1a2744' : '#EEF4FF' }]}
+              style={[
+                styles.modeBtn,
+                d.border,
+                isDarkMode && {
+                  borderColor: C.primary,
+                  backgroundColor: isDarkMode ? "#1a2744" : "#EEF4FF",
+                },
+              ]}
               onPress={() => {
                 if (!isDarkMode) toggleDarkMode();
               }}

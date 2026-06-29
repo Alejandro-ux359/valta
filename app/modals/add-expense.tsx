@@ -22,6 +22,8 @@ import { sendLocalNotification } from "@/lib/notifications";
 import { AmountInput } from "@/components/forms/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { format } from "date-fns";
+import { CurrencySelector } from "@/components/forms/CurrencySelector";
+import { useStore } from "@/lib/store/useStore";
 
 const CATEGORIES = [
   { id: 1, name: "Comida", icon: "restaurant", color: "#FF6B35" },
@@ -40,6 +42,8 @@ export default function AddExpenseModal() {
   const { id } = useLocalSearchParams<{ id?: string }>();
   const isEditing = !!id;
 
+  const { currency: defaultCurrency } = useStore();
+  const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
@@ -130,6 +134,10 @@ export default function AddExpenseModal() {
       <ScrollView style={styles.content} keyboardShouldPersistTaps="handled">
         <AmountInput value={amount} onChange={setAmount} error={amountError} />
 
+        <CurrencySelector
+          selected={selectedCurrency}
+          onSelect={setSelectedCurrency}
+        />
         <View style={[styles.descRow, { borderColor: C.border }]}>
           <MaterialIcons name="notes" size={20} color={C.textMuted} />
           <TextInput

@@ -10,9 +10,11 @@ import {
 import { initDatabase } from "../lib/database";
 import { requestNotificationPermission } from "../lib/notifications";
 import { useStore } from "../lib/store/useStore";
+import { useColors } from "../lib/hooks/useColors";
 
 export default function RootLayout() {
   const isDarkMode = useStore((s) => s.isDarkMode);
+  const C = useColors();
 
   useEffect(() => {
     async function setup() {
@@ -26,23 +28,55 @@ export default function RootLayout() {
     <SafeAreaProvider>
       <ThemeProvider value={isDarkMode ? DarkTheme : DefaultTheme}>
         <StatusBar style={isDarkMode ? "light" : "dark"} />
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            contentStyle: { backgroundColor: C.background },
+            animation: "fade",
+          }}
+        >
+          <Stack.Screen
+            name="(tabs)"
+            options={{
+              animation: "none",
+              contentStyle: { backgroundColor: C.background },
+            }}
+          />
           <Stack.Screen
             name="modals/add-expense"
-            options={{ presentation: "modal", headerShown: false }}
+            options={{
+              presentation: "transparentModal",
+              animation: "slide_from_bottom",
+              headerShown: false,
+              contentStyle: { backgroundColor: C.white },
+            }}
           />
           <Stack.Screen
             name="modals/add-income"
-            options={{ presentation: "modal", headerShown: false }}
+            options={{
+              presentation: "transparentModal",
+              animation: "slide_from_bottom",
+              headerShown: false,
+              contentStyle: { backgroundColor: C.white },
+            }}
           />
           <Stack.Screen
             name="modals/add-debt"
-            options={{ presentation: "modal", headerShown: false }}
+            options={{
+              presentation: "transparentModal",
+              animation: "slide_from_bottom",
+              headerShown: false,
+              contentStyle: { backgroundColor: C.white },
+            }}
           />
           <Stack.Screen
             name="modals/register-payment"
-            options={{ presentation: "modal", headerShown: false }}
+            options={{
+              presentation: "transparentModal",
+              animation: "slide_from_bottom",
+              headerShown: false,
+              contentStyle: { backgroundColor: C.background },
+            }}
           />
         </Stack>
       </ThemeProvider>

@@ -18,6 +18,8 @@ import { scheduleDebtReminder } from "@/lib/notifications";
 import { AmountInput } from "@/components/forms/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { format } from "date-fns";
+import { CurrencySelector } from "@/components/forms/CurrencySelector";
+import { useStore } from "@/lib/store/useStore";
 
 type DebtType = "payable" | "receivable";
 
@@ -31,6 +33,8 @@ export default function AddDebtModal() {
   const [dueDate, setDueDate] = useState("");
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
+  const { currency: defaultCurrency } = useStore();
+  const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
 
   const handleSave = async () => {
     setAmountError("");
@@ -143,7 +147,10 @@ export default function AddDebtModal() {
         </View>
 
         <AmountInput value={amount} onChange={setAmount} error={amountError} />
-
+        <CurrencySelector
+          selected={selectedCurrency}
+          onSelect={setSelectedCurrency}
+        />
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Nombre del contacto
         </Text>

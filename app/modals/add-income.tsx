@@ -18,6 +18,8 @@ import { sendLocalNotification } from "@/lib/notifications";
 import { AmountInput } from "@/components/forms/AmountInput";
 import { Button } from "@/components/ui/Button";
 import { format } from "date-fns";
+import { CurrencySelector } from "@/components/forms/CurrencySelector";
+import { useStore } from "@/lib/store/useStore";
 
 const INCOME_CATEGORIES = [
   { id: 10, name: "Salario", icon: "work", color: "#2E7D32" },
@@ -34,6 +36,8 @@ export default function AddIncomeModal() {
   const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const insets = useSafeAreaInsets();
+  const { currency: defaultCurrency } = useStore();
+  const [selectedCurrency, setSelectedCurrency] = useState(defaultCurrency);
 
   const handleSave = async () => {
     setAmountError("");
@@ -100,6 +104,10 @@ export default function AddIncomeModal() {
           onChange={setAmount}
           error={amountError}
           currency="$"
+        />
+        <CurrencySelector
+          selected={selectedCurrency}
+          onSelect={setSelectedCurrency}
         />
 
         <View style={[styles.inputRow, { borderColor: C.border }]}>

@@ -1,11 +1,17 @@
-import { create } from "zustand";
-import { Appearance } from "react-native";
+import { create } from 'zustand';
+import { Appearance } from 'react-native';
 
 interface Summary {
   balance: number;
   income: number;
   expenses: number;
   savings: number;
+}
+
+export interface UserCurrency {
+  code: string;
+  label: string;
+  symbol: string;
 }
 
 interface AppState {
@@ -16,11 +22,13 @@ interface AppState {
   unreadNotifications: number;
   isDarkMode: boolean;
   currency: string;
+  userCurrencies: UserCurrency[];
 
   setSummary: (s: Summary) => void;
   setUnreadNotifications: (n: number) => void;
   toggleDarkMode: () => void;
   setCurrency: (c: string) => void;
+  setUserCurrencies: (currencies: UserCurrency[]) => void;
 }
 
 export const useStore = create<AppState>((set, get) => ({
@@ -29,15 +37,17 @@ export const useStore = create<AppState>((set, get) => ({
   expenses: 0,
   savings: 0,
   unreadNotifications: 0,
-  isDarkMode: Appearance.getColorScheme() === "dark",
-  currency: "CUP",
+  isDarkMode: Appearance.getColorScheme() === 'dark',
+  currency: 'CUP',
+  userCurrencies: [{ code: 'CUP', label: 'Peso Cubano', symbol: '$' }],
 
   setSummary: (s) => set(s),
   setUnreadNotifications: (n) => set({ unreadNotifications: n }),
   toggleDarkMode: () => {
     const next = !get().isDarkMode;
     set({ isDarkMode: next });
-    Appearance.setColorScheme(next ? "dark" : "light");
+    Appearance.setColorScheme(next ? 'dark' : 'light');
   },
   setCurrency: (currency) => set({ currency }),
+  setUserCurrencies: (userCurrencies) => set({ userCurrencies }),
 }));

@@ -7,6 +7,8 @@ import {
   StyleSheet,
   RefreshControl,
   Alert,
+  Dimensions,
+  FlatList,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -24,10 +26,6 @@ import { getUnreadCount } from "@/lib/notifications";
 import { useStore } from "@/lib/store/useStore";
 import { TransactionItem } from "@/components/cards/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
-import { ScrollView as HScrollView } from "react-native";
-import { Dimensions } from "react-native";
 
 const QUICK_ACTIONS = [
   {
@@ -71,7 +69,6 @@ export default function DashboardScreen() {
     savings,
     setSummary,
     setUnreadNotifications,
-    currency,
     isDarkMode,
   } = useStore();
   const insets = useSafeAreaInsets();
@@ -110,8 +107,6 @@ export default function DashboardScreen() {
       },
     ]);
   };
-
-  const monthName = format(new Date(), "MMMM yyyy", { locale: es });
 
   // Colores de acciones rápidas adaptados al modo oscuro
   const actionColors = isDarkMode
@@ -152,32 +147,27 @@ export default function DashboardScreen() {
         }
       >
         {/* ── TARJETA (dentro del scroll, debajo del header fijo) ── */}
-        <View style={styles.cardWrapper}>
-          <HScrollView
+        <View style={[styles.cardWrapper, { backgroundColor: Colors.primary }]}>
+          <FlatList
+            data={userCurrencies}
+            keyExtractor={(item) => item.code}
             horizontal
             pagingEnabled
             showsHorizontalScrollIndicator={false}
+            snapToAlignment="center"
+            decelerationRate="fast"
             onMomentumScrollEnd={(e) => {
               const idx = Math.round(
-                e.nativeEvent.contentOffset.x /
-                  (Dimensions.get("window").width - Spacing.md * 2),
+                e.nativeEvent.contentOffset.x / CARD_WIDTH,
               );
               setCardIndex(idx);
             }}
-            decelerationRate="fast"
-            snapToInterval={Dimensions.get("window").width - Spacing.md * 2}
-            contentContainerStyle={{ gap: Spacing.md }}
-          >
-            {userCurrencies.map((cur, i) => (
+            renderItem={({ item: cur }) => (
               <LinearGradient
-                key={cur.code}
                 colors={["#1565C0", "#1976D2", "#00ACC1", "#00BCD4"]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[
-                  styles.card,
-                  { width: Dimensions.get("window").width - Spacing.md * 2 },
-                ]}
+                style={styles.card}
               >
                 <View style={styles.circle1} />
                 <View style={styles.circle2} />
@@ -214,8 +204,10 @@ export default function DashboardScreen() {
                   </View>
                 </View>
               </LinearGradient>
-            ))}
-          </HScrollView>
+            )}
+          />
+
+          {/* Indicadores */}
           {userCurrencies.length > 1 && (
             <View style={styles.dotsRow}>
               {userCurrencies.map((_, i) => (
@@ -227,7 +219,8 @@ export default function DashboardScreen() {
                       backgroundColor:
                         i === cardIndex
                           ? Colors.white
-                          : "rgba(255,255,255,0.4)",
+                          : "rgba(255,255,255,0.35)",
+                      width: i === cardIndex ? 16 : 6,
                     },
                   ]}
                 />
@@ -337,20 +330,9 @@ export default function DashboardScreen() {
     </View>
   );
 }
-
+const CARD_WIDTH = Dimensions.get("window").width - Spacing.md * 2;
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  dotsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    gap: 6,
-    marginTop: Spacing.sm,
-  },
-  dot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
 
   // Header fijo fuera del scroll
   fixedHeader: {
@@ -367,8 +349,8 @@ const styles = StyleSheet.create({
     color: Colors.white,
   },
   bellBtn: { padding: 4 },
+  // Tarjeta
 
-  // Zona de la tarjeta (dentro del scroll)
   cardWrapper: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -376,14 +358,25 @@ const styles = StyleSheet.create({
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
   },
-
-  // Tarjeta
   card: {
+    width: CARD_WIDTH, // ← ancho exacto para el snap
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     overflow: "hidden",
     minHeight: 140,
   },
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 5,
+    marginTop: Spacing.sm,
+  },
+  dot: {
+    height: 6,
+    borderRadius: 3,
+  },
+
   circle1: {
     position: "absolute",
     width: 240,

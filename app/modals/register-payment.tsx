@@ -194,7 +194,10 @@ export default function RegisterPaymentModal() {
           placeholder="Buscar por nombre, descripción..."
           placeholderTextColor={C.textMuted}
           value={search}
-          onChangeText={setSearch}
+          onChangeText={(text) =>
+            setSearch(text.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, ""))
+          }
+          maxLength={40}
         />
         {search.length > 0 && (
           <TouchableOpacity onPress={() => setSearch("")}>

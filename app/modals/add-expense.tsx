@@ -24,6 +24,7 @@ import { Button } from "@/components/ui/Button";
 import { format } from "date-fns";
 import { CurrencySelector } from "@/components/forms/CurrencySelector";
 import { useStore } from "@/lib/store/useStore";
+import { ValidatedInput } from "@/components/forms/ValidatedInput";
 
 const CATEGORIES = [
   { id: 1, name: "Comida", icon: "restaurant", color: "#FF6B35" },
@@ -138,16 +139,14 @@ export default function AddExpenseModal() {
           selected={selectedCurrency}
           onSelect={setSelectedCurrency}
         />
-        <View style={[styles.descRow, { borderColor: C.border }]}>
-          <MaterialIcons name="notes" size={20} color={C.textMuted} />
-          <TextInput
-            style={[styles.descInput, { color: C.textPrimary }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Descripción (opcional)"
-            placeholderTextColor={C.textMuted}
-          />
-        </View>
+        <ValidatedInput
+          icon="notes"
+          value={description}
+          onChange={setDescription}
+          placeholder="Descripción (opcional)"
+          type="description"
+          maxLength={80}
+        />
 
         <Text style={[styles.sectionLabel, { color: C.textSecondary }]}>
           Categoría

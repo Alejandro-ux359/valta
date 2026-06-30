@@ -561,6 +561,7 @@ export default function SettingsScreen() {
             <Text style={[styles.addSectionTitle, d.titleText]}>
               Monedas disponibles
             </Text>
+
             <View style={[styles.searchWrap, d.surface, d.border]}>
               <MaterialIcons name="search" size={18} color={C.textMuted} />
               <TextInput
@@ -568,9 +569,15 @@ export default function SettingsScreen() {
                 placeholder="Buscar..."
                 placeholderTextColor={C.textMuted}
                 value={currencySearch}
-                onChangeText={setCurrencySearch}
+                onChangeText={(text) =>
+                  setCurrencySearch(
+                    text.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, ""),
+                  )
+                }
+                maxLength={30}
               />
             </View>
+
             {availableToAdd.map((cur) => (
               <TouchableOpacity
                 key={cur.code}
@@ -614,31 +621,40 @@ export default function SettingsScreen() {
             </Text>
             {[
               {
+                key: "code",
                 label: "Código (ej: DKK)",
                 value: newCode,
                 setter: setNewCode,
                 placeholder: "USD",
                 caps: true,
                 max: 5,
+                sanitize: (text: string) =>
+                  text.replace(/[^a-zA-Z]/g, "").toUpperCase(),
               },
               {
+                key: "label",
                 label: "Nombre completo",
                 value: newLabel,
                 setter: setNewLabel,
                 placeholder: "Ej: Corona Danesa",
                 caps: false,
                 max: 50,
+                sanitize: (text: string) =>
+                  text.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, ""),
               },
               {
+                key: "symbol",
                 label: "Símbolo (opcional)",
                 value: newSymbol,
                 setter: setNewSymbol,
                 placeholder: "Ej: kr",
                 caps: false,
                 max: 4,
+                sanitize: (text: string) =>
+                  text.replace(/[^a-zA-Z0-9$€£¥₹₽฿₩]/g, ""),
               },
             ].map((field) => (
-              <View key={field.label} style={styles.inputGroup}>
+              <View key={field.key} style={styles.inputGroup}>
                 <Text style={[styles.inputLabel, d.subText]}>
                   {field.label}
                 </Text>
@@ -651,7 +667,7 @@ export default function SettingsScreen() {
                   placeholder={field.placeholder}
                   placeholderTextColor={C.textMuted}
                   value={field.value}
-                  onChangeText={field.setter}
+                  onChangeText={(text) => field.setter(field.sanitize(text))}
                   autoCapitalize={field.caps ? "characters" : "sentences"}
                   maxLength={field.max}
                 />

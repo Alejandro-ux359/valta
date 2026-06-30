@@ -4,7 +4,6 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
   StyleSheet,
   Alert,
 } from "react-native";
@@ -20,6 +19,7 @@ import { Button } from "@/components/ui/Button";
 import { format } from "date-fns";
 import { CurrencySelector } from "@/components/forms/CurrencySelector";
 import { useStore } from "@/lib/store/useStore";
+import { ValidatedInput } from "@/components/forms/ValidatedInput";
 
 const INCOME_CATEGORIES = [
   { id: 10, name: "Salario", icon: "work", color: "#2E7D32" },
@@ -110,16 +110,14 @@ export default function AddIncomeModal() {
           onSelect={setSelectedCurrency}
         />
 
-        <View style={[styles.inputRow, { borderColor: C.border }]}>
-          <MaterialIcons name="notes" size={20} color={C.textMuted} />
-          <TextInput
-            style={[styles.input, { color: C.textPrimary }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Descripción (opcional)"
-            placeholderTextColor={C.textMuted}
-          />
-        </View>
+        <ValidatedInput
+          icon="notes"
+          value={description}
+          onChange={setDescription}
+          placeholder="Descripción (opcional)"
+          type="description"
+          maxLength={80}
+        />
 
         <Text style={[styles.sectionLabel, { color: C.textSecondary }]}>
           Categoría

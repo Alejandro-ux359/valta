@@ -20,6 +20,8 @@ import { Button } from "@/components/ui/Button";
 import { format } from "date-fns";
 import { CurrencySelector } from "@/components/forms/CurrencySelector";
 import { useStore } from "@/lib/store/useStore";
+import { ValidatedInput } from "@/components/forms/ValidatedInput";
+import { DatePickerField } from "@/components/forms/DatePickerField";
 
 type DebtType = "payable" | "receivable";
 
@@ -151,48 +153,39 @@ export default function AddDebtModal() {
           selected={selectedCurrency}
           onSelect={setSelectedCurrency}
         />
+
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Nombre del contacto
         </Text>
-        <View style={[styles.inputRow, { borderColor: C.border }]}>
-          <MaterialIcons name="person" size={20} color={C.textMuted} />
-          <TextInput
-            style={[styles.input, { color: C.textPrimary }]}
-            value={contactName}
-            onChangeText={setContactName}
-            placeholder="Ej: Juan Pérez"
-            placeholderTextColor={C.textMuted}
-          />
-        </View>
+        <ValidatedInput
+          icon="person"
+          value={contactName}
+          onChange={setContactName}
+          placeholder="Ej: Juan Pérez"
+          type="name"
+          maxLength={50}
+        />
 
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Descripción
         </Text>
-        <View style={[styles.inputRow, { borderColor: C.border }]}>
-          <MaterialIcons name="notes" size={20} color={C.textMuted} />
-          <TextInput
-            style={[styles.input, { color: C.textPrimary }]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Ej: Préstamo personal"
-            placeholderTextColor={C.textMuted}
-          />
-        </View>
+        <ValidatedInput
+          icon="notes"
+          value={description}
+          onChange={setDescription}
+          placeholder="Ej: Préstamo personal"
+          type="description"
+          maxLength={80}
+        />
 
         <Text style={[styles.label, { color: C.textSecondary }]}>
           Fecha de vencimiento
         </Text>
-        <View style={[styles.inputRow, { borderColor: C.border }]}>
-          <MaterialIcons name="event" size={20} color={C.textMuted} />
-          <TextInput
-            style={[styles.input, { color: C.textPrimary }]}
-            value={dueDate}
-            onChangeText={setDueDate}
-            placeholder="YYYY-MM-DD  Ej: 2025-01-31"
-            placeholderTextColor={C.textMuted}
-            keyboardType="numbers-and-punctuation"
-          />
-        </View>
+        <DatePickerField
+          value={dueDate}
+          onChange={setDueDate}
+          placeholder="Selecciona la fecha de vencimiento"
+        />
 
         <View style={{ height: Spacing.xl }} />
       </ScrollView>

@@ -67,7 +67,8 @@
           "savePhotosPermission": "Guardar reportes en tu galería",
           "isAccessMediaLocationEnabled": true
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

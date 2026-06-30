@@ -22,6 +22,7 @@ import {
 } from "@/lib/database/transactions";
 import { TransactionItem } from "@/components/cards/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { ValidatedInput } from "@/components/forms/ValidatedInput";
 
 type FilterType = "all" | "expense" | "income";
 
@@ -139,7 +140,10 @@ export default function ExpensesScreen() {
             placeholder="Buscar transacciones..."
             placeholderTextColor={C.textMuted}
             value={search}
-            onChangeText={setSearch}
+            onChangeText={(text) =>
+              setSearch(text.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s]/g, ""))
+            }
+            maxLength={40}
           />
           {search.length > 0 && (
             <TouchableOpacity onPress={() => setSearch("")}>

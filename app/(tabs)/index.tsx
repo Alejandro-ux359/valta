@@ -17,15 +17,23 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Colors, Spacing, FontSize, BorderRadius } from "@/lib/constants/theme";
 import { useColors } from "@/lib/hooks/useColors";
 import {
-  getSummary,
+  getSummariesForCurrencies,
   getTransactions,
   deleteTransaction,
   Transaction,
+  Summary,
 } from "@/lib/database/transactions";
 import { getUnreadCount } from "@/lib/notifications";
 import { useStore } from "@/lib/store/useStore";
 import { TransactionItem } from "@/components/cards/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+
+const EMPTY_SUMMARY: Summary = {
+  balance: 0,
+  income: 0,
+  expenses: 0,
+  savings: 0,
+};
 
 const QUICK_ACTIONS = [
   {
@@ -70,23 +78,29 @@ export default function DashboardScreen() {
     setSummary,
     setUnreadNotifications,
     isDarkMode,
+    currency,
+    userCurrencies,
   } = useStore();
   const insets = useSafeAreaInsets();
 
-  const { userCurrencies } = useStore();
   const [cardIndex, setCardIndex] = useState(0);
+  const [summariesByCurrency, setSummariesByCurrency] = useState<
+    Record<string, Summary>
+  >({});
 
   const loadData = useCallback(async () => {
-    const [summary, txs, unread] = await Promise.all([
-      getSummary(),
+    const codes = userCurrencies.map((c) => c.code);
+    const [summaries, txs, unread] = await Promise.all([
+      getSummariesForCurrencies(codes),
       getTransactions(8),
       getUnreadCount(),
     ]);
-    setSummary(summary);
+    setSummariesByCurrency(summaries);
+    setSummary(summaries[currency] ?? EMPTY_SUMMARY);
     setRecentTxs(txs);
     setUnreadNotifications(unread);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [userCurrencies, currency]);
 
   useFocusEffect(
     useCallback(() => {
@@ -162,49 +176,65 @@ export default function DashboardScreen() {
               );
               setCardIndex(idx);
             }}
-            renderItem={({ item: cur }) => (
-              <LinearGradient
-                colors={["#1565C0", "#1976D2", "#00ACC1", "#00BCD4"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.card}
-              >
-                <View style={styles.circle1} />
-                <View style={styles.circle2} />
+            renderItem={({ item: cur }) => {
+              const curSummary = summariesByCurrency[cur.code] ?? EMPTY_SUMMARY;
+              const isNegative = curSummary.balance < 0;
 
-                <View style={styles.cardAmountRow}>
-                  <Text style={styles.cardSymbol}>{cur.symbol}</Text>
-                  <Text
-                    style={styles.cardAmount}
-                    numberOfLines={1}
-                    adjustsFontSizeToFit
-                  >
-                    {Math.abs(balance).toFixed(2)}
-                  </Text>
-                </View>
+              return (
+                <LinearGradient
+                  colors={["#1565C0", "#1976D2", "#00ACC1", "#00BCD4"]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.card}
+                >
+                  <View style={styles.circle1} />
+                  <View style={styles.circle2} />
 
-                <View style={styles.cardBottom}>
-                  <View style={styles.trendRow}>
-                    <MaterialIcons
-                      name="trending-up"
-                      size={16}
-                      color="rgba(255,255,255,0.9)"
-                    />
-                    <View style={styles.progressBg}>
-                      <View
-                        style={[
-                          styles.progressFill,
-                          { width: balance >= 0 ? "65%" : "20%" },
-                        ]}
+                  <View style={styles.cardAmountRow}>
+                    <Text
+                      style={[
+                        styles.cardSymbol,
+                        isNegative && { color: "#FFCDD2" },
+                      ]}
+                    >
+                      {cur.symbol}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.cardAmount,
+                        isNegative && { color: "#FFCDD2" },
+                      ]}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {isNegative ? "-" : ""}
+                      {Math.abs(curSummary.balance).toFixed(2)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.cardBottom}>
+                    <View style={styles.trendRow}>
+                      <MaterialIcons
+                        name="trending-up"
+                        size={16}
+                        color="rgba(255,255,255,0.9)"
                       />
+                      <View style={styles.progressBg}>
+                        <View
+                          style={[
+                            styles.progressFill,
+                            { width: balance >= 0 ? "65%" : "20%" },
+                          ]}
+                        />
+                      </View>
+                    </View>
+                    <View style={styles.currencyBadge}>
+                      <Text style={styles.currencyText}>{cur.code}</Text>
                     </View>
                   </View>
-                  <View style={styles.currencyBadge}>
-                    <Text style={styles.currencyText}>{cur.code}</Text>
-                  </View>
-                </View>
-              </LinearGradient>
-            )}
+                </LinearGradient>
+              );
+            }}
           />
 
           {/* Indicadores */}

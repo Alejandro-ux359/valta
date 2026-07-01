@@ -1,8 +1,8 @@
-import { getDatabase } from './index';
+import { getDatabase } from "./index";
 
 export interface Transaction {
   id?: number;
-  type: 'expense' | 'income';
+  type: "expense" | "income";
   amount: number;
   description: string;
   category_id: number;
@@ -40,7 +40,7 @@ export async function getTransactions(limit = 50): Promise<Transaction[]> {
      LEFT JOIN categories c ON t.category_id = c.id
      ORDER BY t.date DESC, t.created_at DESC
      LIMIT ?`,
-    [limit]
+    [limit],
   );
   return result as Transaction[];
 }
@@ -50,25 +50,32 @@ export async function addTransaction(tx: Transaction): Promise<number> {
   const result = await db.runAsync(
     `INSERT INTO transactions (type, amount, description, category_id, date, from_sms)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [tx.type, tx.amount, tx.description, tx.category_id, tx.date, tx.from_sms ?? 0]
+    [
+      tx.type,
+      tx.amount,
+      tx.description,
+      tx.category_id,
+      tx.date,
+      tx.from_sms ?? 0,
+    ],
   );
   return result.lastInsertRowId;
 }
 
 export async function deleteTransaction(id: number): Promise<void> {
   const db = getDatabase();
-  await db.runAsync('DELETE FROM transactions WHERE id = ?', [id]);
+  await db.runAsync("DELETE FROM transactions WHERE id = ?", [id]);
 }
 
 export async function getSummary(): Promise<Summary> {
   const db = getDatabase();
-  const result = await db.getFirstAsync(
+  const result = (await db.getFirstAsync(
     `SELECT
       COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
       COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expenses
      FROM transactions
-     WHERE strftime('%Y-%m', date) = strftime('%Y-%m', 'now')`
-  ) as { income: number; expenses: number } | null;
+     WHERE strftime('%Y-%m', date) = strftime('%Y-%m', 'now')`,
+  )) as { income: number; expenses: number } | null;
 
   const income = result?.income ?? 0;
   const expenses = result?.expenses ?? 0;
@@ -90,7 +97,7 @@ export async function getExpensesByCategory(): Promise<CategoryTotal[]> {
      WHERE t.type = 'expense'
      AND strftime('%Y-%m', t.date) = strftime('%Y-%m', 'now')
      GROUP BY c.id
-     ORDER BY total DESC`
+     ORDER BY total DESC`,
   );
   return result as CategoryTotal[];
 }
@@ -105,7 +112,7 @@ export async function getMonthlyComparison(): Promise<MonthlyData[]> {
      FROM transactions
      GROUP BY strftime('%Y-%m', date)
      ORDER BY date DESC
-     LIMIT 6`
+     LIMIT 6`,
   );
   return result as MonthlyData[];
 }
@@ -116,6 +123,38 @@ export async function updateTransaction(tx: Transaction): Promise<void> {
     `UPDATE transactions
      SET type = ?, amount = ?, description = ?, category_id = ?, date = ?
      WHERE id = ?`,
-    [tx.type, tx.amount, tx.description, tx.category_id, tx.date, tx.id!]
+    [tx.type, tx.amount, tx.description, tx.category_id, tx.date, tx.id!],
   );
+}
+
+export async function getSummaryByCurrency(currency: string): Promise<Summary> {
+  const db = getDatabase();
+  const result = (await db.getFirstAsync(
+    `SELECT
+      COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
+      COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expenses
+     FROM transactions
+     WHERE currency = ?
+     AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')`,
+    [currency],
+  )) as { income: number; expenses: number } | null;
+
+  const income = result?.income ?? 0;
+  const expenses = result?.expenses ?? 0;
+  return {
+    income,
+    expenses,
+    balance: income - expenses,
+    savings: Math.max(0, income - expenses),
+  };
+}
+
+export async function getSummariesForCurrencies(
+  currencies: string[],
+): Promise<Record<string, Summary>> {
+  const result: Record<string, Summary> = {};
+  for (const code of currencies) {
+    result[code] = await getSummaryByCurrency(code);
+  }
+  return result;
 }

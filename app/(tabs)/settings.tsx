@@ -359,8 +359,8 @@ export default function SettingsScreen() {
               bg: "#E3F2FD",
               color: "#1565C0",
               label: "Telegram personal",
-              value: "@alejandro",
-              url: "https://t.me/alejandro",
+              value: "@Alejandro009",
+              url: "https://t.me/Alejandro009",
             },
             {
               icon: "groups",
@@ -368,7 +368,7 @@ export default function SettingsScreen() {
               color: "#1565C0",
               label: "Grupo de Telegram",
               value: "t.me/nombredelgrupo",
-              url: "https://t.me/nombredelgrupo",
+              url: "https://t.me/alex_devcode",
             },
             {
               icon: "email",
@@ -376,7 +376,7 @@ export default function SettingsScreen() {
               color: "#C62828",
               label: "Correo electrónico",
               value: "micorreo@gmail.com",
-              url: "mailto:micorreo@gmail.com?subject=Hola desde Valta",
+              url: "mailto:alexdevcode.soportesoft@gmail.com?subject=Hola, le escribo desde Valta",
             },
             {
               icon: "code",
@@ -384,7 +384,7 @@ export default function SettingsScreen() {
               color: "#2E7D32",
               label: "Desarrollo colaborativo",
               value: "¿Tienes un proyecto? Escríbeme",
-              url: "mailto:micorreo@gmail.com?subject=Propuesta de desarrollo",
+              url: "mailto:alexdevcode.soportesoft@gmail.com?subject=Me gustaría hacerle una propuesta de desarrollo",
             },
           ].map((item, i, arr) => (
             <View key={item.label}>

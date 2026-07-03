@@ -63,6 +63,7 @@ export default function AddIncomeModal() {
         description,
         category_id: selectedCategory,
         date: format(new Date(), "yyyy-MM-dd"),
+        currency: selectedCurrency, // ← agrega solo esta línea
       });
       await sendLocalNotification(
         "💰 Ingreso registrado",

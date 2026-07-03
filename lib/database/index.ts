@@ -1,10 +1,10 @@
-import * as SQLite from 'expo-sqlite';
+import * as SQLite from "expo-sqlite";
 
 let db: SQLite.SQLiteDatabase;
 
 export function getDatabase(): SQLite.SQLiteDatabase {
   if (!db) {
-    db = SQLite.openDatabaseSync('fintrack.db');
+    db = SQLite.openDatabaseSync("fintrack.db");
   }
   return db;
 }
@@ -57,12 +57,25 @@ export async function initDatabase(): Promise<void> {
     );
   `);
 
+  // Migración: agrega currency si no existe
+  try {
+    await db.execAsync(
+      `ALTER TABLE transactions ADD COLUMN currency TEXT DEFAULT 'CUP';`,
+    );
+  } catch {
+    /* ya existe */
+  }
+
+  await db.execAsync(
+    `UPDATE transactions SET currency = 'CUP' WHERE currency IS NULL;`,
+  );
+
   await seedCategories(db);
 }
 
 async function seedCategories(db: SQLite.SQLiteDatabase) {
   const existing = await db.getFirstAsync<{ count: number }>(
-    'SELECT COUNT(*) as count FROM categories'
+    "SELECT COUNT(*) as count FROM categories",
   );
 
   if (existing && existing.count > 0) return;

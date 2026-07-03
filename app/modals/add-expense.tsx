@@ -4,7 +4,7 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  TextInput,
+  // TextInput,
   StyleSheet,
   Alert,
 } from "react-native";
@@ -100,6 +100,7 @@ export default function AddExpenseModal() {
           description,
           category_id: selectedCategory,
           date: format(new Date(), "yyyy-MM-dd"),
+          currency: selectedCurrency, // ← agrega solo esta línea
         });
         await sendLocalNotification(
           "💸 Gasto registrado",

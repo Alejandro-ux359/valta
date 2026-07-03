@@ -71,7 +71,7 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [recentTxs, setRecentTxs] = useState<Transaction[]>([]);
   const {
-    balance,
+    // balance,
     income,
     expenses,
     savings,

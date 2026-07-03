@@ -7,6 +7,7 @@ export interface Transaction {
   description: string;
   category_id: number;
   date: string;
+  currency?: string;
   from_sms?: number;
   category_name?: string;
   category_icon?: string;
@@ -48,8 +49,8 @@ export async function getTransactions(limit = 50): Promise<Transaction[]> {
 export async function addTransaction(tx: Transaction): Promise<number> {
   const db = getDatabase();
   const result = await db.runAsync(
-    `INSERT INTO transactions (type, amount, description, category_id, date, from_sms)
-     VALUES (?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO transactions (type, amount, description, category_id, date, from_sms, currency)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
     [
       tx.type,
       tx.amount,
@@ -57,6 +58,7 @@ export async function addTransaction(tx: Transaction): Promise<number> {
       tx.category_id,
       tx.date,
       tx.from_sms ?? 0,
+      tx.currency ?? "CUP",
     ],
   );
   return result.lastInsertRowId;
@@ -67,19 +69,20 @@ export async function deleteTransaction(id: number): Promise<void> {
   await db.runAsync("DELETE FROM transactions WHERE id = ?", [id]);
 }
 
-export async function getSummary(): Promise<Summary> {
+export async function getSummary(currency = "CUP"): Promise<Summary> {
   const db = getDatabase();
   const result = (await db.getFirstAsync(
     `SELECT
       COALESCE(SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END), 0) as income,
       COALESCE(SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END), 0) as expenses
      FROM transactions
-     WHERE strftime('%Y-%m', date) = strftime('%Y-%m', 'now')`,
+     WHERE currency = ?
+     AND strftime('%Y-%m', date) = strftime('%Y-%m', 'now')`,
+    [currency],
   )) as { income: number; expenses: number } | null;
 
   const income = result?.income ?? 0;
   const expenses = result?.expenses ?? 0;
-
   return {
     income,
     expenses,
@@ -154,7 +157,7 @@ export async function getSummariesForCurrencies(
 ): Promise<Record<string, Summary>> {
   const result: Record<string, Summary> = {};
   for (const code of currencies) {
-    result[code] = await getSummaryByCurrency(code);
+    result[code] = await getSummary(code);
   }
   return result;
 }

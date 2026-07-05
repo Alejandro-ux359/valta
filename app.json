@@ -24,7 +24,7 @@
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
-      "package": "com.tuapp.valta",
+      "package": "com.alejandroux359.valta",
       "permissions": [
         "android.permission.RECEIVE_SMS",
         "android.permission.READ_SMS",

@@ -80,6 +80,7 @@ export default function DashboardScreen() {
     isDarkMode,
     currency,
     userCurrencies,
+    unreadNotifications,
   } = useStore();
   const insets = useSafeAreaInsets();
 
@@ -142,8 +143,25 @@ export default function DashboardScreen() {
       {/* ── HEADER FIJO (no hace scroll) ── */}
       <View style={[styles.fixedHeader, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.appName}>Valta</Text>
-        <TouchableOpacity style={styles.bellBtn}>
-          <MaterialIcons name="notifications" size={26} color={Colors.white} />
+
+        <TouchableOpacity
+          style={styles.bellBtn}
+          onPress={() => router.push("/modals/notifications" as any)}
+        >
+          <View>
+            <MaterialIcons
+              name="notifications"
+              size={26}
+              color={Colors.white}
+            />
+            {unreadNotifications > 0 && (
+              <View style={styles.bellBadge}>
+                <Text style={styles.bellBadgeText}>
+                  {unreadNotifications > 9 ? "9+" : unreadNotifications}
+                </Text>
+              </View>
+            )}
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -558,4 +576,18 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
+
+  //notificacion
+  bellBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.danger,
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellBadgeText: { color: Colors.white, fontSize: 9, fontWeight: "bold" },
 });

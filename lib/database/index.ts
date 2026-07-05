@@ -65,10 +65,31 @@ export async function initDatabase(): Promise<void> {
   } catch {
     /* ya existe */
   }
-
   await db.execAsync(
     `UPDATE transactions SET currency = 'CUP' WHERE currency IS NULL;`,
   );
+
+  // ── AGREGA ESTO ──
+  try {
+    await db.execAsync(
+      `ALTER TABLE debts ADD COLUMN currency TEXT DEFAULT 'CUP';`,
+    );
+  } catch {
+    /* ya existe */
+  }
+
+  try {
+    await db.execAsync(
+      `ALTER TABLE notifications_log ADD COLUMN read INTEGER DEFAULT 0;`,
+    );
+  } catch {
+    /* ya existe */
+  }
+
+  await db.execAsync(
+    `UPDATE notifications_log SET read = 0 WHERE read IS NULL;`,
+  );
+  // ── FIN ──
 
   await seedCategories(db);
 }

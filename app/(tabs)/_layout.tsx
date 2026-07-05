@@ -1,14 +1,11 @@
 import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import { View, Text } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColors } from "@/lib/hooks/useColors";
-import { useStore } from "@/lib/store/useStore";
 
 export default function TabLayout() {
   const C = useColors();
   const insets = useSafeAreaInsets();
-  const unread = useStore((s) => s.unreadNotifications);
 
   return (
     <Tabs
@@ -71,30 +68,7 @@ export default function TabLayout() {
         options={{
           title: "Ajustes",
           tabBarIcon: ({ color, size }) => (
-            <View>
-              <MaterialIcons name="settings" size={size} color={color} />
-              {unread > 0 && (
-                <View
-                  style={{
-                    position: "absolute",
-                    top: -4,
-                    right: -4,
-                    backgroundColor: "#C62828",
-                    borderRadius: 8,
-                    width: 16,
-                    height: 16,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Text
-                    style={{ color: "#fff", fontSize: 9, fontWeight: "bold" }}
-                  >
-                    {unread > 9 ? "9+" : unread}
-                  </Text>
-                </View>
-              )}
-            </View>
+            <MaterialIcons name="settings" size={size} color={color} />
           ),
         }}
       />

@@ -22,22 +22,12 @@ export async function requestNotificationPermission(): Promise<boolean> {
     N.setNotificationHandler({
       handleNotification: async () => ({
         shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
+        shouldPlaySound: false,
+        shouldSetBadge: false,
         shouldShowBanner: true,
         shouldShowList: true,
       }),
     });
-
-    const { status: existing } = await N.getPermissionsAsync();
-    let finalStatus = existing;
-
-    if (existing !== "granted") {
-      const { status } = await N.requestPermissionsAsync();
-      finalStatus = status;
-    }
-
-    if (finalStatus !== "granted") return false;
 
     if (Platform.OS === "android") {
       await N.setNotificationChannelAsync("default", {
@@ -64,24 +54,28 @@ export async function sendLocalNotification(
   title: string,
   body: string,
   type: string = "general",
+  sendToSystem: boolean = false, // ← nuevo parámetro, default false
 ): Promise<void> {
   try {
-    const N = await getNotifications();
-    if (N) {
-      await N.scheduleNotificationAsync({
-        content: { title, body, sound: true, data: { type } },
-        trigger: null,
-      });
+    // Solo manda al sistema si viene de SMS u otra fuente automática
+    if (sendToSystem) {
+      const N = await getNotifications();
+      if (N) {
+        await N.scheduleNotificationAsync({
+          content: { title, body, sound: true, data: { type } },
+          trigger: null,
+        });
+      }
     }
 
-    // Siempre guardamos en log local aunque no haya notificación
+    // Siempre guarda en la bandeja interna
     const db = getDatabase();
     await db.runAsync(
       "INSERT INTO notifications_log (title, body, type) VALUES (?, ?, ?)",
       [title, body, type],
     );
   } catch {
-    // Silencioso en Expo Go
+    // Silencioso
   }
 }
 

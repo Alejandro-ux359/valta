@@ -159,7 +159,7 @@ export default function NotificationsModal() {
         <FlatList
           data={items}
           keyExtractor={(item) => item.id.toString()}
-          contentContainerStyle={{ paddingBottom: insets.bottom + 16 }}
+          contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingTop: Spacing.md,   }}
           renderItem={({ item }) => {
             const typeInfo = TYPE_ICON[item.type] ?? TYPE_ICON.general;
             const isUnread = item.read === 0;
@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "flex-start",
     marginHorizontal: Spacing.md,
-    marginBottom: Spacing.sm,
+    marginBottom: Spacing.md,
     borderRadius: BorderRadius.lg,
     padding: Spacing.md,
     borderLeftWidth: 0,

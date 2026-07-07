@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Stack } from "expo-router";
+import { router, Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import {
@@ -11,6 +11,9 @@ import { initDatabase } from "../lib/database";
 import { requestNotificationPermission } from "../lib/notifications";
 import { useStore } from "../lib/store/useStore";
 import { useColors } from "../lib/hooks/useColors";
+import * as ExpoSplashScreen from "expo-splash-screen";
+
+ExpoSplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
   const isDarkMode = useStore((s) => s.isDarkMode);
@@ -20,6 +23,8 @@ export default function RootLayout() {
     async function setup() {
       await initDatabase();
       await requestNotificationPermission();
+      await ExpoSplashScreen.hideAsync();
+      router.replace("/splash" as any);
     }
     setup();
   }, []);
@@ -35,6 +40,14 @@ export default function RootLayout() {
             animation: "fade",
           }}
         >
+          <Stack.Screen
+            name="splash"
+            options={{
+              animation: "none",
+              headerShown: false,
+              contentStyle: { backgroundColor: "#FFFFFF" },
+            }}
+          />
           <Stack.Screen
             name="(tabs)"
             options={{

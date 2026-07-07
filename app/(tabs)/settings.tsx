@@ -314,13 +314,13 @@ export default function SettingsScreen() {
               color: "#2E7D32",
               label: "Guía de uso",
             },
-            {
-              key: "license",
-              icon: "gavel",
-              bg: "#FFF8E1",
-              color: "#F57F17",
-              label: "Licencia",
-            },
+            // {
+            //   key: "license",
+            //   icon: "gavel",
+            //   bg: "#FFF8E1",
+            //   color: "#F57F17",
+            //   label: "Licencia",
+            // },
           ].map((item, i, arr) => (
             <View key={item.key}>
               <TouchableOpacity
@@ -915,7 +915,7 @@ export default function SettingsScreen() {
       {/* ══════════════════════
           MODAL: LICENCIA
       ══════════════════════ */}
-      <Modal
+      {/* <Modal
         visible={activeModal === "license"}
         animationType="slide"
         onRequestClose={() => setActiveModal(null)}
@@ -950,7 +950,7 @@ export default function SettingsScreen() {
             </Text>
           </ScrollView>
         </View>
-      </Modal>
+      </Modal> */}
     </View>
   );
 }

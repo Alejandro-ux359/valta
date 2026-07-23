@@ -9,6 +9,7 @@ import {
   Alert,
   Dimensions,
   FlatList,
+  Modal,
 } from "react-native";
 import { router, useFocusEffect } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -23,16 +24,26 @@ import {
   Transaction,
   Summary,
 } from "@/lib/database/transactions";
+import { getCardsByCurrency, Card } from "@/lib/database/cards";
 import { getUnreadCount } from "@/lib/notifications";
 import { useStore } from "@/lib/store/useStore";
 import { TransactionItem } from "@/components/cards/TransactionItem";
 import { EmptyState } from "@/components/ui/EmptyState";
+
+const { width } = Dimensions.get("window");
+const CARD_WIDTH = width - Spacing.md * 2;
 
 const EMPTY_SUMMARY: Summary = {
   balance: 0,
   income: 0,
   expenses: 0,
   savings: 0,
+};
+
+const TYPE_LABEL: Record<string, string> = {
+  personal: "Personal",
+  savings: "Ahorro",
+  business: "Negocio",
 };
 
 const QUICK_ACTIONS = [
@@ -68,40 +79,58 @@ const QUICK_ACTIONS = [
 
 export default function DashboardScreen() {
   const C = useColors();
+  const insets = useSafeAreaInsets();
+
   const [refreshing, setRefreshing] = useState(false);
   const [recentTxs, setRecentTxs] = useState<Transaction[]>([]);
+  const [cardIndex, setCardIndex] = useState(0);
+  const [summariesByCurrency, setSummariesByCurrency] = useState<
+    Record<string, Summary>
+  >({});
+  const [cardsByCurrency, setCardsByCurrency] = useState<
+    Record<string, Card[]>
+  >({});
+  const [showCardMenu, setShowCardMenu] = useState(false);
+  const [menuCurrency, setMenuCurrency] = useState("");
+
   const {
-    // balance,
-    income,
-    expenses,
-    savings,
     setSummary,
     setUnreadNotifications,
     isDarkMode,
     currency,
     userCurrencies,
     unreadNotifications,
+    activeCardByCurrency,
+    setActiveCard,
   } = useStore();
-  const insets = useSafeAreaInsets();
-
-  const [cardIndex, setCardIndex] = useState(0);
-  const [summariesByCurrency, setSummariesByCurrency] = useState<
-    Record<string, Summary>
-  >({});
 
   const loadData = useCallback(async () => {
     const codes = userCurrencies.map((c) => c.code);
+
     const [summaries, txs, unread] = await Promise.all([
       getSummariesForCurrencies(codes),
       getTransactions(8),
       getUnreadCount(),
     ]);
+
+    // Cargar tarjetas por cada moneda
+    const cardMap: Record<string, Card[]> = {};
+    for (const code of codes) {
+      const cards = await getCardsByCurrency(code);
+      cardMap[code] = cards;
+      // Si no hay tarjeta activa para esta moneda, usar la primera
+      if (!activeCardByCurrency[code] && cards[0]?.id) {
+        setActiveCard(code, cards[0].id);
+      }
+    }
+
+    setCardsByCurrency(cardMap);
     setSummariesByCurrency(summaries);
     setSummary(summaries[currency] ?? EMPTY_SUMMARY);
     setRecentTxs(txs);
     setUnreadNotifications(unread);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userCurrencies, currency]);
+  }, [currency, userCurrencies]);
 
   useFocusEffect(
     useCallback(() => {
@@ -123,7 +152,12 @@ export default function DashboardScreen() {
     ]);
   };
 
-  // Colores de acciones rápidas adaptados al modo oscuro
+  const getActiveCard = (code: string): Card | null => {
+    const cards = cardsByCurrency[code] ?? [];
+    const activeId = activeCardByCurrency[code];
+    return cards.find((c) => c.id === activeId) ?? cards[0] ?? null;
+  };
+
   const actionColors = isDarkMode
     ? [
         { bg: "#3D1A1A", icon: "#EF5350" },
@@ -140,10 +174,9 @@ export default function DashboardScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: C.background }]}>
-      {/* ── HEADER FIJO (no hace scroll) ── */}
+      {/* ── HEADER FIJO ── */}
       <View style={[styles.fixedHeader, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.appName}>Valta</Text>
-
         <TouchableOpacity
           style={styles.bellBtn}
           onPress={() => router.push("/modals/notifications" as any)}
@@ -178,7 +211,7 @@ export default function DashboardScreen() {
           />
         }
       >
-        {/* ── TARJETA (dentro del scroll, debajo del header fijo) ── */}
+        {/* ── TARJETAS ── */}
         <View style={[styles.cardWrapper, { backgroundColor: Colors.primary }]}>
           <FlatList
             data={userCurrencies}
@@ -195,18 +228,60 @@ export default function DashboardScreen() {
               setCardIndex(idx);
             }}
             renderItem={({ item: cur }) => {
-              const curSummary = summariesByCurrency[cur.code] ?? EMPTY_SUMMARY;
-              const isNegative = curSummary.balance < 0;
-              const curBalance = curSummary.balance; // ← usa curSummary que ya existe
+              const activeCard = getActiveCard(cur.code);
+              const balance = activeCard?.balance ?? 0;
+              const isNegative = balance < 0;
+              const cardColor = activeCard?.color ?? "#1565C0";
+
               return (
                 <LinearGradient
-                  colors={["#1565C0", "#1976D2", "#00ACC1", "#00BCD4"]}
+                  colors={[cardColor, cardColor + "CC", "#00ACC1", "#00BCD4"]}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 1 }}
                   style={styles.card}
                 >
                   <View style={styles.circle1} />
                   <View style={styles.circle2} />
+
+                  {/* Fila superior: nombre tarjeta + 3 puntos */}
+                  <View style={styles.cardTopRow}>
+                    <View style={styles.cardNameWrap}>
+                      <MaterialIcons
+                        name={
+                          (activeCard?.icon ?? "account-balance-wallet") as any
+                        }
+                        size={14}
+                        color="rgba(255,255,255,0.85)"
+                      />
+                      <Text style={styles.cardName}>
+                        {activeCard?.name ?? cur.code}
+                      </Text>
+                      {activeCard?.type ? (
+                        <View style={styles.cardTypePill}>
+                          <Text style={styles.cardTypePillText}>
+                            {TYPE_LABEL[activeCard.type]}
+                          </Text>
+                        </View>
+                      ) : null}
+                    </View>
+
+                    {/* 3 puntos */}
+                    <TouchableOpacity
+                      style={styles.cardMenuBtn}
+                      onPress={() => {
+                        setMenuCurrency(cur.code);
+                        setShowCardMenu(true);
+                      }}
+                    >
+                      <MaterialIcons
+                        name="more-vert"
+                        size={22}
+                        color={Colors.white}
+                      />
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Monto */}
                   <View style={styles.cardAmountRow}>
                     <Text
                       style={[
@@ -225,13 +300,15 @@ export default function DashboardScreen() {
                       adjustsFontSizeToFit
                     >
                       {isNegative ? "-" : ""}
-                      {Math.abs(curBalance).toFixed(2)}
+                      {Math.abs(balance).toFixed(2)}
                     </Text>
                   </View>
+
+                  {/* Barra inferior */}
                   <View style={styles.cardBottom}>
                     <View style={styles.trendRow}>
                       <MaterialIcons
-                        name={isNegative ? "trending-down" : "trending-up"}
+                        name={balance >= 0 ? "trending-up" : "trending-down"}
                         size={16}
                         color="rgba(255,255,255,0.9)"
                       />
@@ -239,7 +316,7 @@ export default function DashboardScreen() {
                         <View
                           style={[
                             styles.progressFill,
-                            { width: curBalance >= 0 ? "65%" : "20%" },
+                            { width: balance !== 0 ? "65%" : "10%" },
                           ]}
                         />
                       </View>
@@ -253,7 +330,7 @@ export default function DashboardScreen() {
             }}
           />
 
-          {/* Indicadores */}
+          {/* Dots */}
           {userCurrencies.length > 1 && (
             <View style={styles.dotsRow}>
               {userCurrencies.map((_, i) => (
@@ -277,42 +354,62 @@ export default function DashboardScreen() {
 
         {/* ── CONTENIDO ── */}
         <View style={[styles.content, { backgroundColor: C.background }]}>
-          {/* Stats */}
-          <View style={[styles.statsCard, { backgroundColor: C.white }]}>
-            <View style={styles.statItem}>
-              <MaterialIcons name="arrow-upward" size={20} color="#2E7D32" />
-              <Text style={[styles.statLabel, { color: C.textSecondary }]}>
-                Ingresos
-              </Text>
-              <Text style={[styles.statValue, { color: C.textPrimary }]}>
-                ${income.toFixed(2)}
-              </Text>
-            </View>
-            <View
-              style={[styles.statDivider, { backgroundColor: C.borderLight }]}
-            />
-            <View style={styles.statItem}>
-              <MaterialIcons name="arrow-downward" size={20} color="#C62828" />
-              <Text style={[styles.statLabel, { color: C.textSecondary }]}>
-                Gastos
-              </Text>
-              <Text style={[styles.statValue, { color: C.textPrimary }]}>
-                ${expenses.toFixed(2)}
-              </Text>
-            </View>
-            <View
-              style={[styles.statDivider, { backgroundColor: C.borderLight }]}
-            />
-            <View style={styles.statItem}>
-              <MaterialIcons name="savings" size={20} color="#1565C0" />
-              <Text style={[styles.statLabel, { color: C.textSecondary }]}>
-                Ahorros
-              </Text>
-              <Text style={[styles.statValue, { color: C.textPrimary }]}>
-                ${savings.toFixed(2)}
-              </Text>
-            </View>
-          </View>
+          {/* Stats de la tarjeta activa */}
+          {(() => {
+            const curCode = userCurrencies[cardIndex]?.code ?? currency;
+            const activeCard = getActiveCard(curCode);
+            return (
+              <View style={[styles.statsCard, { backgroundColor: C.white }]}>
+                <View style={styles.statItem}>
+                  <MaterialIcons
+                    name="arrow-upward"
+                    size={20}
+                    color="#2E7D32"
+                  />
+                  <Text style={[styles.statLabel, { color: C.textSecondary }]}>
+                    Ingresos
+                  </Text>
+                  <Text style={[styles.statValue, { color: C.textPrimary }]}>
+                    ${(activeCard?.income ?? 0).toFixed(2)}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statDivider,
+                    { backgroundColor: C.borderLight },
+                  ]}
+                />
+                <View style={styles.statItem}>
+                  <MaterialIcons
+                    name="arrow-downward"
+                    size={20}
+                    color="#C62828"
+                  />
+                  <Text style={[styles.statLabel, { color: C.textSecondary }]}>
+                    Gastos
+                  </Text>
+                  <Text style={[styles.statValue, { color: C.textPrimary }]}>
+                    ${(activeCard?.expenses ?? 0).toFixed(2)}
+                  </Text>
+                </View>
+                <View
+                  style={[
+                    styles.statDivider,
+                    { backgroundColor: C.borderLight },
+                  ]}
+                />
+                <View style={styles.statItem}>
+                  <MaterialIcons name="savings" size={20} color="#1565C0" />
+                  <Text style={[styles.statLabel, { color: C.textSecondary }]}>
+                    Ahorros
+                  </Text>
+                  <Text style={[styles.statValue, { color: C.textPrimary }]}>
+                    ${Math.max(0, activeCard?.balance ?? 0).toFixed(2)}
+                  </Text>
+                </View>
+              </View>
+            );
+          })()}
 
           {/* Acciones rápidas */}
           <Text style={[styles.sectionTitle, { color: C.textPrimary }]}>
@@ -364,7 +461,9 @@ export default function DashboardScreen() {
                   key={tx.id}
                   transaction={tx}
                   onDelete={() => tx.id && handleDelete(tx.id)}
-                  onEdit={() => router.push(`/modals/add-expense?id=${tx.id}`)}
+                  onEdit={() =>
+                    router.push(`/modals/add-expense?id=${tx.id}` as any)
+                  }
                 />
               ))
             )}
@@ -373,14 +472,101 @@ export default function DashboardScreen() {
           <View style={{ height: 24 }} />
         </View>
       </ScrollView>
+
+      {/* ── MODAL MENÚ 3 PUNTOS ── */}
+      <Modal
+        visible={showCardMenu}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowCardMenu(false)}
+      >
+        <TouchableOpacity
+          style={styles.menuOverlay}
+          activeOpacity={1}
+          onPress={() => setShowCardMenu(false)}
+        >
+          <View style={[styles.menuSheet, { backgroundColor: C.white }]}>
+            {/* Tarjeta activa seleccionada */}
+            {(() => {
+              const activeCard = getActiveCard(menuCurrency);
+              return activeCard ? (
+                <View
+                  style={[
+                    styles.menuItem,
+                    { borderBottomColor: C.borderLight, borderBottomWidth: 1 },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.menuCardIcon,
+                      { backgroundColor: activeCard.color + "22" },
+                    ]}
+                  >
+                    <MaterialIcons
+                      name={activeCard.icon as any}
+                      size={18}
+                      color={activeCard.color}
+                    />
+                  </View>
+                  <View style={styles.menuCardInfo}>
+                    <Text
+                      style={[styles.menuCardName, { color: C.textPrimary }]}
+                    >
+                      {activeCard.name}
+                    </Text>
+                    <Text style={[styles.menuCardType, { color: C.textMuted }]}>
+                      {TYPE_LABEL[activeCard.type]}
+                    </Text>
+                  </View>
+                  <MaterialIcons
+                    name="check"
+                    size={20}
+                    color={Colors.primary}
+                  />
+                </View>
+              ) : null;
+            })()}
+
+            {/* Gestionar tarjetas */}
+            <TouchableOpacity
+              style={[styles.menuItem, { borderBottomWidth: 0 }]}
+              onPress={() => {
+                setShowCardMenu(false);
+                router.push(
+                  `/modals/manage-cards?currency=${menuCurrency}` as any,
+                );
+              }}
+            >
+              <View
+                style={[
+                  styles.menuCardIcon,
+                  { backgroundColor: C.surfaceSecondary },
+                ]}
+              >
+                <MaterialIcons
+                  name="credit-card"
+                  size={18}
+                  color={C.textSecondary}
+                />
+              </View>
+              <Text style={[styles.menuCardName, { color: C.textPrimary }]}>
+                Gestionar tarjetas
+              </Text>
+              <MaterialIcons
+                name="chevron-right"
+                size={20}
+                color={C.textMuted}
+              />
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </View>
   );
 }
-const CARD_WIDTH = Dimensions.get("window").width - Spacing.md * 2;
+
 const styles = StyleSheet.create({
   root: { flex: 1 },
-
-  // Header fijo fuera del scroll
   fixedHeader: {
     backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
@@ -389,47 +575,41 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  appName: {
-    fontSize: 28,
-    fontWeight: "bold",
-    color: Colors.white,
-  },
+  appName: { fontSize: 28, fontWeight: "bold", color: Colors.white },
   bellBtn: { padding: 4 },
-  // Tarjeta
+  bellBadge: {
+    position: "absolute",
+    top: -4,
+    right: -4,
+    backgroundColor: Colors.danger,
+    borderRadius: 8,
+    width: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  bellBadgeText: { color: Colors.white, fontSize: 9, fontWeight: "bold" },
 
   cardWrapper: {
-    backgroundColor: Colors.primary,
     paddingHorizontal: Spacing.md,
     paddingBottom: Spacing.xl,
     borderBottomLeftRadius: 28,
     borderBottomRightRadius: 28,
   },
   card: {
-    width: CARD_WIDTH, // ← ancho exacto para el snap
+    width: CARD_WIDTH,
     borderRadius: BorderRadius.xl,
     padding: Spacing.lg,
     overflow: "hidden",
-    minHeight: 140,
+    minHeight: 170,
   },
-  dotsRow: {
-    flexDirection: "row",
-    justifyContent: "center",
-    alignItems: "center",
-    gap: 5,
-    marginTop: Spacing.sm,
-  },
-  dot: {
-    height: 6,
-    borderRadius: 3,
-  },
-
   circle1: {
     position: "absolute",
     width: 240,
     height: 240,
     borderRadius: 120,
     backgroundColor: "#00BCD4",
-    opacity: 0.75,
+    opacity: 0.45,
     top: -40,
     right: -50,
   },
@@ -438,16 +618,34 @@ const styles = StyleSheet.create({
     width: 160,
     height: 160,
     borderRadius: 80,
-    backgroundColor: "#0D47A1",
-    opacity: 0.6,
+    backgroundColor: "#000",
+    opacity: 0.12,
     bottom: -60,
     left: -40,
   },
+
+  cardTopRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: Spacing.sm,
+  },
+  cardNameWrap: { flexDirection: "row", alignItems: "center", gap: 6, flex: 1 },
+  cardName: { color: Colors.white, fontSize: FontSize.sm, fontWeight: "600" },
+  cardTypePill: {
+    backgroundColor: "rgba(255,255,255,0.2)",
+    borderRadius: BorderRadius.full,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  cardTypePillText: { color: Colors.white, fontSize: 10, fontWeight: "600" },
+  cardMenuBtn: { padding: 4 },
+
   cardAmountRow: {
     flexDirection: "row",
     alignItems: "flex-start",
     gap: 6,
-    marginBottom: Spacing.lg,
+    marginBottom: Spacing.md,
   },
   cardSymbol: {
     fontSize: 26,
@@ -456,11 +654,12 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   cardAmount: {
-    fontSize: 48,
+    fontSize: 44,
     fontWeight: "bold",
     color: Colors.white,
     flex: 1,
   },
+
   cardBottom: {
     flexDirection: "row",
     alignItems: "center",
@@ -498,12 +697,16 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
-  // Contenido
-  content: {
-    paddingTop: Spacing.md,
+  dotsRow: {
+    flexDirection: "row",
+    justifyContent: "center",
+    alignItems: "center",
+    gap: 5,
+    marginTop: Spacing.sm,
   },
+  dot: { height: 6, borderRadius: 3 },
 
-  // Stats
+  content: { paddingTop: Spacing.md },
   statsCard: {
     flexDirection: "row",
     borderRadius: BorderRadius.lg,
@@ -517,16 +720,11 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 3,
   },
-  statItem: {
-    flex: 1,
-    alignItems: "center",
-    gap: 4,
-  },
+  statItem: { flex: 1, alignItems: "center", gap: 4 },
   statLabel: { fontSize: FontSize.xs },
   statValue: { fontSize: FontSize.sm, fontWeight: "bold" },
   statDivider: { width: 1, marginVertical: 4 },
 
-  // Acciones
   sectionTitle: {
     fontSize: FontSize.lg,
     fontWeight: "bold",
@@ -547,13 +745,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     gap: 6,
   },
-  actionLabel: {
-    fontSize: 10,
-    textAlign: "center",
-    fontWeight: "500",
-  },
+  actionLabel: { fontSize: 10, textAlign: "center", fontWeight: "500" },
 
-  // Transacciones
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -561,11 +754,7 @@ const styles = StyleSheet.create({
     marginHorizontal: Spacing.md,
     marginBottom: Spacing.sm,
   },
-  viewAll: {
-    fontSize: FontSize.sm,
-    color: Colors.primary,
-    fontWeight: "500",
-  },
+  viewAll: { fontSize: FontSize.sm, color: Colors.primary, fontWeight: "500" },
   txCard: {
     borderRadius: BorderRadius.lg,
     marginHorizontal: Spacing.md,
@@ -577,17 +766,47 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
 
-  //notificacion
-  bellBadge: {
-    position: "absolute",
-    top: -4,
-    right: -4,
-    backgroundColor: Colors.danger,
-    borderRadius: 8,
-    width: 16,
-    height: 16,
+  // Menú 3 puntos
+  menuOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  menuSheet: {
+    width: width * 0.78,
+    borderRadius: BorderRadius.xl,
+    paddingVertical: Spacing.sm,
+    overflow: "hidden",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.2,
+    shadowRadius: 16,
+    elevation: 10,
+  },
+  menuTitle: {
+    fontSize: FontSize.xs,
+    fontWeight: "600",
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    letterSpacing: 0.5,
+  },
+  menuItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: Spacing.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+  },
+  menuCardIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: "center",
     justifyContent: "center",
   },
-  bellBadgeText: { color: Colors.white, fontSize: 9, fontWeight: "bold" },
+  menuCardInfo: { flex: 1 },
+  menuCardName: { fontSize: FontSize.sm, fontWeight: "600" },
+  menuCardType: { fontSize: FontSize.xs, marginTop: 1 },
+  menuDivider: { height: 1, marginVertical: Spacing.xs },
 });

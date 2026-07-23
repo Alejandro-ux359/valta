@@ -100,6 +100,15 @@ export default function RootLayout() {
               contentStyle: { backgroundColor: C.background },
             }}
           />
+          <Stack.Screen
+            name="modals/manage-cards"
+            options={{
+              presentation: "transparentModal",
+              animation: "slide_from_bottom",
+              headerShown: false,
+              contentStyle: { backgroundColor: C.background },
+            }}
+          />
         </Stack>
       </ThemeProvider>
     </SafeAreaProvider>

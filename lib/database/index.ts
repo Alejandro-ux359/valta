@@ -86,6 +86,45 @@ export async function initDatabase(): Promise<void> {
     /* ya existe */
   }
 
+  // Tabla de tarjetas por moneda
+  try {
+    await db.execAsync(`
+    CREATE TABLE IF NOT EXISTS cards (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      currency TEXT NOT NULL,
+      name TEXT NOT NULL,
+      description TEXT,
+      type TEXT NOT NULL DEFAULT 'personal' CHECK(type IN ('personal', 'savings', 'business')),
+      color TEXT NOT NULL DEFAULT '#1565C0',
+      icon TEXT NOT NULL DEFAULT 'account-balance-wallet',
+      account_number TEXT,
+      allow_transfers INTEGER DEFAULT 1,
+      is_active INTEGER DEFAULT 1,
+      created_at TEXT DEFAULT (datetime('now'))
+    );
+  `);
+  } catch {
+    /* ya existe */
+  }
+
+  // Migración: agrega card_id a transactions
+  try {
+    await db.execAsync(`ALTER TABLE transactions ADD COLUMN card_id INTEGER;`);
+  } catch {
+    /* ya existe */
+  }
+
+  // Crear tarjeta principal de CUP por defecto si no existe ninguna
+  const existingCards = await db.getFirstAsync<{ count: number }>(
+    `SELECT COUNT(*) as count FROM cards WHERE currency = 'CUP'`,
+  );
+  if (!existingCards || existingCards.count === 0) {
+    await db.execAsync(`
+    INSERT INTO cards (currency, name, description, type, color, icon, allow_transfers)
+    VALUES ('CUP', 'Valta Personal', 'Cuenta principal', 'personal', '#1565C0', 'account-balance-wallet', 1)
+  `);
+  }
+
   await db.execAsync(
     `UPDATE notifications_log SET read = 0 WHERE read IS NULL;`,
   );

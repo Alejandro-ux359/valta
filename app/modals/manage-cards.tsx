@@ -151,8 +151,6 @@ function CardPreview({
   card: typeof EMPTY_FORM & { name: string };
   currency: string;
 }) {
-  const isBrandIcon = getIconLib(card.icon) !== "material";
-
   return (
     <LinearGradient
       colors={[card.color, card.color + "AA", "#1565C0"]}
@@ -195,12 +193,6 @@ function CardPreview({
             {card.name.toUpperCase() || "NOMBRE DE LA TARJETA"}
           </Text>
         </View>
-        {/* Si es marca financiera, muéstrala grande a la derecha */}
-        {isBrandIcon ? (
-          <AppIcon name={card.icon} size={42} color="rgba(255,255,255,0.85)" />
-        ) : (
-          <Text style={styles.previewCurrency}>{currency}</Text>
-        )}
       </View>
     </LinearGradient>
   );
@@ -1709,7 +1701,7 @@ const styles = StyleSheet.create({
   previewBgIcon: {
     position: "absolute",
     bottom: -10,
-    right: -10,
+    right: 2,
     opacity: 1,
   },
   listCardBrandIcon: {
